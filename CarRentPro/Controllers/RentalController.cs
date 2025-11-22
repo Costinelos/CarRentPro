@@ -23,8 +23,41 @@ namespace CarRentPro.Controllers
             _context = context;
         }
 
+        // GET: Rent a specific vehicle
+        public async Task<IActionResult> Rent(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var vehicle = await _context.Vehicles
+                .Include(v => v.Branch)
+                .FirstOrDefaultAsync(v => v.Id == id);
+
+            if (vehicle == null)
+            {
+                return NotFound();
+            }
+
+            // Verifică dacă mașina este disponibilă
+            var isAvailable = await _rentalService.IsVehicleAvailableAsync(vehicle.Id);
+            if (!isAvailable)
+            {
+                TempData["ErrorMessage"] = "This vehicle is currently not available for rental.";
+                return RedirectToAction("Details", "Vehicle", new { id = vehicle.Id });
+            }
+
+            ViewBag.Vehicle = vehicle;
+            ViewBag.MinReturnDate = DateTime.Now.AddDays(1).ToString("yyyy-MM-dd");
+
+            return View();
+        }
+
+        // POST: Create rental
         [HttpPost]
-        public async Task<IActionResult> Create(int vehicleId, DateTime rentalDate, DateTime returnDate)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Rent(int vehicleId, DateTime returnDate)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -32,7 +65,13 @@ namespace CarRentPro.Controllers
                 return RedirectToAction("Login", "Identity");
             }
 
-            var result = await _rentalService.CreateRentalAsync(user.Id, vehicleId, rentalDate, returnDate);
+            if (returnDate <= DateTime.Now)
+            {
+                TempData["ErrorMessage"] = "Return date must be in the future.";
+                return RedirectToAction("Rent", new { id = vehicleId });
+            }
+
+            var result = await _rentalService.CreateRentalAsync(user.Id, vehicleId, returnDate);
 
             if (result.Success)
             {
@@ -42,10 +81,11 @@ namespace CarRentPro.Controllers
             else
             {
                 TempData["ErrorMessage"] = result.Message;
-                return RedirectToAction("Details", "Vehicle", new { id = vehicleId });
+                return RedirectToAction("Rent", new { id = vehicleId });
             }
         }
 
+        // GET: User's rentals
         public async Task<IActionResult> MyRentals()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -58,32 +98,56 @@ namespace CarRentPro.Controllers
             return View(rentals);
         }
 
+        // POST: Cancel rental
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var result = await _rentalService.CancelRentalAsync(id, user.Id);
+
+            if (result)
+            {
+                TempData["SuccessMessage"] = "Rental cancelled successfully!";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Error cancelling rental or rental not found.";
+            }
+
+            return RedirectToAction("MyRentals");
+        }
+
+        // GET: All rentals (for admin/employee)
+        [Authorize(Roles = "Admin,Employee")]
+        public async Task<IActionResult> Index()
+        {
+            var rentals = await _rentalService.GetAllRentalsAsync();
+            return View(rentals);
+        }
+
+        // POST: Complete rental (for admin/employee)
+        [HttpPost]
+        [Authorize(Roles = "Admin,Employee")]
+        public async Task<IActionResult> CompleteRental(int id)
         {
             var rental = await _context.Rentals
                 .Include(r => r.Vehicle)
                 .FirstOrDefaultAsync(r => r.Id == id);
 
-            if (rental == null)
+            if (rental != null)
             {
-                return NotFound();
+                rental.Status = "Completed";
+                rental.Vehicle.IsAvailable = true;
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Rental marked as completed!";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Rental not found!";
             }
 
-            var user = await _userManager.GetUserAsync(User);
-            if (rental.UserId != user.Id && !User.IsInRole("Admin") && !User.IsInRole("Employee"))
-            {
-                return Forbid();
-            }
-
-            
-            rental.Status = "Cancelled";
-            rental.Vehicle.IsAvailable = true;
-
-            await _context.SaveChangesAsync();
-
-            TempData["SuccessMessage"] = "Rental cancelled successfully!";
-            return RedirectToAction("MyRentals");
+            return RedirectToAction("Index");
         }
     }
 }

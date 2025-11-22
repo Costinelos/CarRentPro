@@ -1,0 +1,125 @@
+﻿@model CarRentPro.Models.Vehicle
+@{
+    ViewData["Title"] = "Rent Vehicle";
+    var vehicle = ViewBag.Vehicle as CarRentPro.Models.Vehicle;
+    var minReturnDate = ViewBag.MinReturnDate as string;
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h1>Rent Vehicle</h1>
+
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+            }
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <img src="@vehicle.ImageUrl" class="img-fluid rounded" alt="@vehicle.Brand @vehicle.Model"
+                                 onerror="this.onerror=null; this.src='/images/vehicles/default-car.jpg'">
+                        </div>
+                        <div class="col-md-8">
+                            <h3>@vehicle.Brand @vehicle.Model</h3>
+                            <p><strong>Year:</strong> @vehicle.Year</p>
+                            <p><strong>Color:</strong> @vehicle.Color</p>
+                            <p><strong>Branch:</strong> @vehicle.Branch.Name</p>
+                            <p><strong>Price per Day:</strong> $@vehicle.PricePerDay</p>
+                            <p><strong>Description:</strong> @vehicle.Description</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h4>Rental Information</h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Rent" method="post">
+                        <input type="hidden" name="vehicleId" value="@vehicle.Id" />
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label"><strong>Rental Date</strong></label>
+                                    <input type="text" class="form-control" value="@DateTime.Now.ToString("MMMM dd, yyyy")" readonly>
+                                    <small class="form-text text-muted">Rental starts from today</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="returnDate" class="form-label"><strong>Return Date *</strong></label>
+                                    <input type="date" class="form-control" id="returnDate" name="returnDate"
+                                           min="@minReturnDate" required>
+                                    <small class="form-text text-muted">Select when you plan to return the vehicle</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="alert alert-info">
+                                <h6>Rental Summary</h6>
+                                <div id="rentalSummary">
+                                    <p>Select a return date to see rental details</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="@Url.Action("Details", "Vehicle", new { id = vehicle.Id })" class="btn btn-secondary me-md-2">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Confirm Rental</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const returnDateInput = document.getElementById('returnDate');
+            const rentalSummary = document.getElementById('rentalSummary');
+            const pricePerDay = @vehicle.PricePerDay;
+
+            function updateRentalSummary() {
+                const returnDate = new Date(returnDateInput.value);
+                const rentalDate = new Date();
+
+                if (returnDate && returnDate > rentalDate) {
+                    const days = Math.ceil((returnDate - rentalDate) / (1000 * 60 * 60 * 24));
+                    const totalPrice = days * pricePerDay;
+
+                    rentalSummary.innerHTML = `
+                        <p><strong>Rental Period:</strong> ${rentalDate.toLocaleDateString()} - ${returnDate.toLocaleDateString()}</p>
+                        <p><strong>Total Days:</strong> ${days} day${days > 1 ? 's' : ''}</p>
+                        <p><strong>Total Price:</strong> $${totalPrice.toFixed(2)}</p>
+                        <p class="mb-0"><small>($${pricePerDay} × ${days} day${days > 1 ? 's' : ''})</small></p>
+                    `;
+                } else {
+                    rentalSummary.innerHTML = '<p>Select a return date to see rental details</p>';
+                }
+            }
+
+            returnDateInput.addEventListener('change', updateRentalSummary);
+
+           
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            returnDateInput.min = tomorrow.toISOString().split('T')[0];
+
+            
+            const defaultReturnDate = new Date();
+            defaultReturnDate.setDate(defaultReturnDate.getDate() + 3);
+            returnDateInput.value = defaultReturnDate.toISOString().split('T')[0];
+
+           
+            updateRentalSummary();
+        });
+    </script>
+}
