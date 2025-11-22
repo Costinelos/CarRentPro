@@ -4,8 +4,12 @@ namespace CarRentPro.Services
 {
     public interface IRentalService
     {
-        Task<(bool Success, string Message)> CreateRentalAsync(string userId, int vehicleId, DateTime startDate, DateTime endDate);
+        Task<Rental> GetRentalByIdAsync(int id);
         Task<List<Rental>> GetUserRentalsAsync(string userId);
-        Task<bool> CanUserRentVehicle(string userId, int vehicleId, DateTime startDate, DateTime endDate);
+        Task<List<Rental>> GetAllRentalsAsync();
+        Task<(bool Success, string Message, Rental Rental)> CreateRentalAsync(string userId, int vehicleId, DateTime returnDate);
+        Task<bool> CancelRentalAsync(int rentalId, string userId);
+        Task<bool> CanUserRentVehicleAsync(string userId, int vehicleId);
+        Task<bool> IsVehicleAvailableAsync(int vehicleId);
     }
 }

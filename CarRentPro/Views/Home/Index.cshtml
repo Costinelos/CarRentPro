@@ -25,7 +25,7 @@
         </div>
     </div>
 
-    
+    <!-- Available Vehicles Section -->
     <div class="row">
         <div class="col-12">
             <h2 class="mb-4">Available Vehicles</h2>
@@ -37,7 +37,7 @@
         {
             <div class="col-md-3 mb-4 vehicle-card">
                 <div class="card h-100">
-                  
+                    <!-- IMAGINEA REALĂ DIN BAZA DE DATE -->
                     <img src="@vehicle.ImageUrl"
                          class="card-img-top vehicle-image"
                          alt="@vehicle.Brand @vehicle.Model"
@@ -67,11 +67,21 @@
                             }
                         </div>
                         <div class="mt-2">
-                           
-                            <a href="@Url.Action("Details", "Vehicle", new { id = vehicle.Id })"
-                               class="btn btn-primary btn-sm w-100">
-                                <i class="fas fa-car"></i> Rent Now
-                            </a>
+                            <!-- BUTON RENT CARE TE DUCE DIRECT LA PAGINA DE RENT -->
+                            @if (vehicle.IsAvailable)
+                            {
+                                <a href="@Url.Action("Rent", "Rental", new { id = vehicle.Id })"
+                                   class="btn btn-primary btn-sm w-100">
+                                    <i class="fas fa-car"></i> Rent Now
+                                </a>
+                            }
+                            else
+                            {
+                                <a href="@Url.Action("Details", "Vehicle", new { id = vehicle.Id })"
+                                   class="btn btn-secondary btn-sm w-100">
+                                    <i class="fas fa-info-circle"></i> View Details
+                                </a>
+                            }
                         </div>
                     </div>
                 </div>
