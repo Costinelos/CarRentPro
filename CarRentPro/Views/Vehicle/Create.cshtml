@@ -1,0 +1,86 @@
+﻿@model CarRentPro.Models.Vehicle
+
+@{
+    ViewData["Title"] = "Add New Vehicle";
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <h1>Add New Vehicle</h1>
+
+            <form asp-action="Create" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="mb-3">
+                    <label asp-for="Brand" class="form-label"></label>
+                    <input asp-for="Brand" class="form-control" required />
+                    <span asp-validation-for="Brand" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Model" class="form-label"></label>
+                    <input asp-for="Model" class="form-control" required />
+                    <span asp-validation-for="Model" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Year" class="form-label"></label>
+                    <input asp-for="Year" class="form-control" type="number" min="2000" max="2030" required />
+                    <span asp-validation-for="Year" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Color" class="form-label"></label>
+                    <input asp-for="Color" class="form-control" required />
+                    <span asp-validation-for="Color" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="PricePerDay" class="form-label"></label>
+                    <input asp-for="PricePerDay" class="form-control" type="number" step="0.01" min="0" required />
+                    <span asp-validation-for="PricePerDay" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Description" class="form-label"></label>
+                    <textarea asp-for="Description" class="form-control" rows="3" required></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+
+                <!-- INPUT PENTRU IMAGINE -->
+                <div class="mb-3">
+                    <label for="imageFile" class="form-label">Vehicle Image</label>
+                    <input type="file" class="form-control" id="imageFile" name="imageFile" accept="image/*" />
+                    <small class="form-text text-muted">Upload a photo of the vehicle (optional)</small>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="BranchId" class="form-label">Branch</label>
+                    <select asp-for="BranchId" class="form-control" asp-items="ViewBag.Branches" required>
+                        <option value="">-- Select Branch --</option>
+                    </select>
+                    <span asp-validation-for="BranchId" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3 form-check">
+                    <input class="form-check-input" asp-for="IsAvailable" checked />
+                    <label class="form-check-label" asp-for="IsAvailable">Available for rental</label>
+                </div>
+
+                <div class="mb-3">
+                    <button type="submit" class="btn btn-primary">Create Vehicle</button>
+                    <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

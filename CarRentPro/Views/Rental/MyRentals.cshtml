@@ -1,0 +1,78 @@
+﻿@model IEnumerable<CarRentPro.Models.Rental>
+
+@{
+    ViewData["Title"] = "My Rentals";
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h1>My Rentals</h1>
+
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+            }
+
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+            }
+
+            @if (!Model.Any())
+            {
+                <div class="alert alert-info">
+                    <h4>No rentals found</h4>
+                    <p>You haven't rented any vehicles yet.</p>
+                    <a href="@Url.Action("Index", "Home")" class="btn btn-primary">Browse Vehicles</a>
+                </div>
+            }
+            else
+            {
+                <div class="row">
+                    @foreach (var rental in Model)
+                    {
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">@rental.Vehicle.Brand @rental.Vehicle.Model</h5>
+                                    <p class="card-text">
+                                        <strong>Rental Period:</strong> @rental.RentalDate.ToString("MMM dd, yyyy") - @rental.ReturnDate.ToString("MMM dd, yyyy")<br>
+                                        <strong>Total Price:</strong> $@rental.TotalPrice<br>
+                                        <strong>Status:</strong>
+                                        <span class="badge @GetStatusBadgeClass(rental.Status)">@rental.Status</span><br>
+                                        <strong>Pickup Location:</strong> @rental.Vehicle.Branch.Name
+                                    </p>
+
+                                    @if (rental.Status == "Active" && rental.ReturnDate >= DateTime.Now)
+                                    {
+                                        <form asp-action="Cancel" asp-route-id="@rental.Id" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-warning btn-sm"
+                                                    onclick="return confirm('Are you sure you want to cancel this rental?')">
+                                                Cancel Rental
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@functions {
+    public string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Active" => "bg-success",
+            "Completed" => "bg-secondary",
+            "Cancelled" => "bg-danger",
+            "Pending" => "bg-warning",
+            _ => "bg-info"
+        };
+    }
+}

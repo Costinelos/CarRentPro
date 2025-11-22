@@ -1,0 +1,20 @@
+﻿@if (User.Identity.IsAuthenticated)
+{
+    <div class="mt-4">
+        <h4>Rent This Vehicle</h4>
+        <form asp-controller="Rental" asp-action="Create" method="post">
+            <input type="hidden" name="vehicleId" value="@Model.Id" />
+            <div class="row">
+                <div class="col-md-6">
+                    <label for="rentalDate">Start Date:</label>
+                    <input type="date" class="form-control" name="rentalDate" id="rentalDate" min="@DateTime.Now.ToString("yyyy-MM-dd")" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="returnDate">Return Date:</label>
+                    <input type="date" class="form-control" name="returnDate" id="returnDate" required>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3">Rent Now</button>
+        </form>
+    </div>
+}

@@ -1,0 +1,83 @@
+﻿@model IEnumerable<CarRentPro.Models.Vehicle>
+
+@{
+    ViewData["Title"] = "All Vehicles";
+}
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1>All Vehicles</h1>
+            <a class="btn btn-primary" asp-action="Create">
+                <i class="fas fa-plus"></i> Add New Vehicle
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="row">
+        @foreach (var vehicle in Model)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <img src="@vehicle.ImageUrl" class="card-img-top vehicle-image"
+                         alt="@vehicle.Brand @vehicle.Model"
+                         onerror="this.onerror=null; this.src='/images/vehicles/default-car.jpg'">
+
+                    <div class="card-body">
+                        <h5 class="card-title">@vehicle.Brand @vehicle.Model</h5>
+                        <p class="card-text">
+                            <strong>Year:</strong> @vehicle.Year<br>
+                            <strong>Color:</strong> @vehicle.Color<br>
+                            <strong>Branch:</strong> @vehicle.Branch?.Name<br>
+                            <strong>Price:</strong> $@vehicle.PricePerDay/day
+                        </p>
+                        <p class="card-text">@vehicle.Description</p>
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between">
+                            <!-- BUTOANELE EDIT ȘI DELETE -->
+                            <div>
+                                <a asp-action="Edit" asp-route-id="@vehicle.Id" class="btn btn-warning btn-sm me-2">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <a asp-action="Delete" asp-route-id="@vehicle.Id" class="btn btn-danger btn-sm">
+                                    <i class="fas fa-trash"></i> Delete
+                                </a>
+                            </div>
+                            <span class="badge @(vehicle.IsAvailable ? "bg-success" : "bg-danger")">
+                                @(vehicle.IsAvailable ? "Available" : "Rented")
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .vehicle-image {
+        height: 250px;
+        object-fit: cover;
+        width: 100%;
+    }
+
+    .card {
+        transition: transform 0.2s;
+    }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+</style>
