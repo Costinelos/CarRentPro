@@ -23,7 +23,6 @@ namespace CarRentPro.Controllers
             _context = context;
         }
 
-        // GET: Rent a specific vehicle
         public async Task<IActionResult> Rent(int? id)
         {
             if (id == null)
@@ -40,7 +39,6 @@ namespace CarRentPro.Controllers
                 return NotFound();
             }
 
-            // Verifică dacă mașina este disponibilă
             var isAvailable = await _rentalService.IsVehicleAvailableAsync(vehicle.Id);
             if (!isAvailable)
             {
@@ -54,7 +52,6 @@ namespace CarRentPro.Controllers
             return View();
         }
 
-        // POST: Create rental
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Rent(int vehicleId, DateTime returnDate)
@@ -85,7 +82,6 @@ namespace CarRentPro.Controllers
             }
         }
 
-        // GET: User's rentals
         public async Task<IActionResult> MyRentals()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -98,7 +94,6 @@ namespace CarRentPro.Controllers
             return View(rentals);
         }
 
-        // POST: Cancel rental
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id)
@@ -118,7 +113,6 @@ namespace CarRentPro.Controllers
             return RedirectToAction("MyRentals");
         }
 
-        // GET: All rentals (for admin/employee)
         [Authorize(Roles = "Admin,Employee")]
         public async Task<IActionResult> Index()
         {
@@ -126,8 +120,8 @@ namespace CarRentPro.Controllers
             return View(rentals);
         }
 
-        // POST: Complete rental (for admin/employee)
         [HttpPost]
+        [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Employee")]
         public async Task<IActionResult> CompleteRental(int id)
         {

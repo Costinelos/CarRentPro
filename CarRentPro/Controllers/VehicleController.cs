@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using CarRentPro.Models;
 using CarRentPro.Services;
 
 namespace CarRentPro.Controllers
 {
+    [Authorize(Roles = "Admin,Employee")]
     public class VehicleController : Controller
     {
         private readonly IVehicleService _vehicleService;
@@ -18,14 +20,13 @@ namespace CarRentPro.Controllers
             _environment = environment;
         }
 
-        // GET: Vehicle/Index 
         public async Task<IActionResult> Index()
         {
             var vehicles = await _vehicleService.GetAllVehiclesAsync();
             return View(vehicles);
         }
 
-        // GET: Vehicle/Details/5
+        [AllowAnonymous]
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -42,14 +43,12 @@ namespace CarRentPro.Controllers
             return View(vehicle);
         }
 
-        // GET: Vehicle/Create
         public async Task<IActionResult> Create()
         {
             await LoadBranchesViewBag();
             return View();
         }
 
-        // POST: Vehicle/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Vehicle vehicle, IFormFile? imageFile)
@@ -61,7 +60,6 @@ namespace CarRentPro.Controllers
             {
                 try
                 {
-                    
                     if (imageFile != null && imageFile.Length > 0)
                     {
                         vehicle.ImageUrl = await SaveImage(imageFile);
@@ -69,7 +67,6 @@ namespace CarRentPro.Controllers
 
                     _logger.LogInformation($"Creating vehicle: {vehicle.Brand} {vehicle.Model}, BranchId: {vehicle.BranchId}");
 
-                   
                     var branches = await _vehicleService.GetAllBranchesAsync();
                     var selectedBranch = branches.FirstOrDefault(b => b.Id == vehicle.BranchId);
 
@@ -104,7 +101,6 @@ namespace CarRentPro.Controllers
             return View(vehicle);
         }
 
-        // GET: Vehicle/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -122,7 +118,6 @@ namespace CarRentPro.Controllers
             return View(vehicle);
         }
 
-        // POST: Vehicle/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Vehicle vehicle, IFormFile? imageFile)
@@ -136,7 +131,6 @@ namespace CarRentPro.Controllers
             {
                 try
                 {
-                    
                     if (imageFile != null && imageFile.Length > 0)
                     {
                         vehicle.ImageUrl = await SaveImage(imageFile);
@@ -157,7 +151,6 @@ namespace CarRentPro.Controllers
             return View(vehicle);
         }
 
-        // GET: Vehicle/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -174,7 +167,6 @@ namespace CarRentPro.Controllers
             return View(vehicle);
         }
 
-        // POST: Vehicle/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
