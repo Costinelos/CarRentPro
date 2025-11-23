@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using CarRentPro.Models;
 using CarRentPro.Services;
 
 namespace CarRentPro.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class BranchController : Controller
     {
         private readonly IBranchService _branchService;
@@ -13,20 +15,17 @@ namespace CarRentPro.Controllers
             _branchService = branchService;
         }
 
-        // GET: Branch/Index
         public async Task<IActionResult> Index()
         {
             var branches = await _branchService.GetAllBranchesAsync();
             return View(branches);
         }
 
-        // GET: Branch/Create
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: Branch/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Branch branch)
@@ -40,7 +39,6 @@ namespace CarRentPro.Controllers
             return View(branch);
         }
 
-        // GET: Branch/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -57,7 +55,6 @@ namespace CarRentPro.Controllers
             return View(branch);
         }
 
-        // POST: Branch/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Branch branch)
@@ -84,7 +81,6 @@ namespace CarRentPro.Controllers
             return View(branch);
         }
 
-        // GET: Branch/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -98,7 +94,6 @@ namespace CarRentPro.Controllers
                 return NotFound();
             }
 
-            
             var hasVehicles = await _branchService.BranchHasVehiclesAsync(id.Value);
             if (hasVehicles)
             {
@@ -109,7 +104,6 @@ namespace CarRentPro.Controllers
             return View(branch);
         }
 
-        // POST: Branch/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)

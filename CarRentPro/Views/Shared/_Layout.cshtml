@@ -25,26 +25,21 @@
                             <a class="nav-link text-light" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
 
-                        <li class="nav-item">
-                            <a class="nav-link text-light" asp-controller="Branch" asp-action="Index">
-                                <i class="fas fa-map-marker-alt"></i> Branches
-                            </a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link text-light" asp-controller="Vehicle" asp-action="Index">
-                                <i class="fas fa-car"></i> All Cars
-                            </a>
-                        </li>
-
                         @if (User.Identity.IsAuthenticated)
                         {
+                            <!-- All Users: View Profile și My Rentals -->
                             <li class="nav-item">
-                                <a class="nav-link text-light" asp-area="" asp-controller="Rental" asp-action="MyRentals">My Rentals</a>
+                                <a class="nav-link text-light" asp-area="Identity" asp-page="/Account/Manage/Index">
+                                    <i class="fas fa-user"></i> View Profile
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-light" asp-area="" asp-controller="Rental" asp-action="MyRentals">
+                                    <i class="fas fa-car"></i> My Rentals
+                                </a>
                             </li>
 
-                            <!--  Admin/Employee -->
-                            @*
+                            <!-- Admin & Employee: Add Cars, Car Stocks, Rented Cars -->
                             @if (User.IsInRole("Admin") || User.IsInRole("Employee"))
                             {
                                 <li class="nav-item">
@@ -53,42 +48,29 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
+                                    <a class="nav-link text-light" asp-controller="Vehicle" asp-action="Index">
+                                        <i class="fas fa-car"></i> Car Stocks
+                                    </a>
+                                </li>
+                                <li class="nav-item">
                                     <a class="nav-link text-light" asp-controller="Rental" asp-action="Index">
-                                        <i class="fas fa-list"></i> All Rentals
+                                        <i class="fas fa-list"></i> Rented Cars
                                     </a>
                                 </li>
                             }
 
+                            <!-- Admin Only: Admin Panel -->
                             @if (User.IsInRole("Admin"))
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link text-light" asp-controller="Admin" asp-action="Index">
+                                    <a class="nav-link text-light" asp-controller="Branch" asp-action="Index">
                                         <i class="fas fa-cog"></i> Admin Panel
                                     </a>
                                 </li>
                             }
-                            *@
-
-                            <!-- DECOMENTAT: Funcționalități pentru testare -->
-                            <li class="nav-item">
-                                <a class="nav-link text-light" asp-controller="Vehicle" asp-action="Create">
-                                    <i class="fas fa-plus"></i> Add Cars
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-light" asp-controller="Rental" asp-action="Index">
-                                    <i class="fas fa-list"></i> All Rentals
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-light" asp-controller="Admin" asp-action="Index">
-                                    <i class="fas fa-cog"></i> Admin Panel
-                                </a>
-                            </li>
                         }
                     </ul>
 
-                    <!-- Login Partial -->
                     <ul class="navbar-nav">
                         @if (User.Identity.IsAuthenticated)
                         {
@@ -103,6 +85,7 @@
                         }
                         else
                         {
+                            <!-- Logged Out State: Login și Register în dreapta -->
                             <li class="nav-item">
                                 <a class="nav-link text-light" asp-area="Identity" asp-page="/Account/Login">Login</a>
                             </li>
