@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using CarRentPro.Models;
 using CarRentPro.Repositories;
 using CarRentPro.Services;
+using CarRentPro.Interfaces;
 
 namespace CarRentPro
 {
@@ -23,13 +24,15 @@ namespace CarRentPro
             builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
             builder.Services.AddScoped<IRentalRepository, RentalRepository>();
             builder.Services.AddScoped<IBranchRepository, BranchRepository>();
+            builder.Services.AddScoped<IBlacklistRepository, BlacklistRepository>();
 
             // Service pattern
             builder.Services.AddScoped<IVehicleService, VehicleService>();
             builder.Services.AddScoped<IRentalService, RentalService>();
             builder.Services.AddScoped<IBranchService, BranchService>();
+            builder.Services.AddScoped<IBlacklistService, BlacklistService>();
 
-            
+
             builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
             {
                 options.SignIn.RequireConfirmedAccount = false;

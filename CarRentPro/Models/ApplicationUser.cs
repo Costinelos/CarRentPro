@@ -15,5 +15,7 @@ namespace CarRentPro.Models
 
        
         public virtual ICollection<Rental> Rentals { get; set; } = new List<Rental>();
+
+        public virtual ICollection<BlacklistEntry> BlacklistEntries { get; set; } = new List<BlacklistEntry>();
     }
 }
