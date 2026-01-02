@@ -16,11 +16,13 @@ namespace CarRentPro.Models
         public DbSet<Rental> Rentals { get; set; }
         public DbSet<VehicleStock> VehicleStocks { get; set; }
 
+        public DbSet<BlacklistEntry> BlacklistEntries { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
-            // Configurare pentru proprietățile decimal
+            
             builder.Entity<Rental>()
                 .Property(r => r.TotalPrice)
                 .HasPrecision(18, 2);
@@ -29,7 +31,7 @@ namespace CarRentPro.Models
                 .Property(v => v.PricePerDay)
                 .HasPrecision(18, 2);
 
-            // Configurări pentru relații și constrângeri
+           
             builder.Entity<Rental>()
                 .HasOne(r => r.User)
                 .WithMany(u => u.Rentals)
@@ -59,6 +61,17 @@ namespace CarRentPro.Models
                 .WithMany(v => v.VehicleStocks)
                 .HasForeignKey(vs => vs.VehicleId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<BlacklistEntry>()
+                .HasOne(b => b.User)
+                .WithMany(u => u.BlacklistEntries)
+                .HasForeignKey(b => b.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+         
+            builder.Entity<BlacklistEntry>()
+                .HasIndex(b => new { b.UserId, b.IsActive, b.ExpirationDate })
+                .HasDatabaseName("IX_Blacklist_ActiveCheck");
         }
     }
 }
