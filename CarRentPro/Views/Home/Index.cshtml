@@ -11,14 +11,52 @@
             <h1 class="display-4 mb-4">Welcome to CarRentPro</h1>
             <p class="lead">Find the perfect car for your journey</p>
 
-            <!-- Search Bar -->
+            <!-- Search Bar with Autocomplete -->
             <div class="row justify-content-center mb-4">
                 <div class="col-md-8">
-                    <div class="input-group">
-                        <input type="text" class="form-control" placeholder="Search for cars..." id="searchInput">
-                        <button class="btn btn-primary" type="button" id="searchButton">
-                            <i class="fas fa-search"></i> Search
-                        </button>
+                    <div class="position-relative">
+                        <div class="input-group">
+                            <input type="text"
+                                   class="form-control"
+                                   placeholder="Search by brand, model, color, year..."
+                                   id="searchInput"
+                                   autocomplete="off">
+                            <button class="btn btn-primary" type="button" id="searchButton">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+
+                        <!-- Autocomplete Dropdown -->
+                        <div id="autocompleteResults" class="autocomplete-dropdown"></div>
+                    </div>
+
+                    <!-- Search Filters -->
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <select class="form-select form-select-sm" id="brandFilter">
+                                <option value="">All Brands</option>
+                                @foreach (var brand in Model.Select(v => v.Brand).Distinct())
+                                {
+                                    <option value="@brand">@brand</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select form-select-sm" id="yearFilter">
+                                <option value="">All Years</option>
+                                @foreach (var year in Model.Select(v => v.Year).Distinct().OrderByDescending(y => y))
+                                {
+                                    <option value="@year">@year</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select form-select-sm" id="availabilityFilter">
+                                <option value="">All</option>
+                                <option value="available">Available Only</option>
+                                <option value="rented">Rented</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -27,17 +65,25 @@
 
     <!-- Available Vehicles Section -->
     <div class="row">
-        <div class="col-12">
-            <h2 class="mb-4">Available Vehicles</h2>
+        <div class="col-12 d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">Available Vehicles</h2>
+            <div>
+                <span id="vehicleCount" class="badge bg-secondary">@Model.Count() vehicles</span>
+            </div>
         </div>
     </div>
 
     <div class="row" id="vehicleGrid">
         @foreach (var vehicle in Model)
         {
-            <div class="col-md-3 mb-4 vehicle-card">
+            <div class="col-md-3 mb-4 vehicle-card"
+                 data-brand="@vehicle.Brand"
+                 data-model="@vehicle.Model"
+                 data-year="@vehicle.Year"
+                 data-color="@vehicle.Color"
+                 data-branch="@vehicle.Branch?.Name"
+                 data-available="@vehicle.IsAvailable.ToString().ToLower()">
                 <div class="card h-100">
-                    <!-- IMAGINEA REALĂ DIN BAZA DE DATE -->
                     <img src="@vehicle.ImageUrl"
                          class="card-img-top vehicle-image"
                          alt="@vehicle.Brand @vehicle.Model"
@@ -52,7 +98,7 @@
                                 <i class="fas fa-map-marker-alt"></i> @vehicle.Branch?.Name
                             </small>
                         </p>
-                        <p class="card-text">@vehicle.Description</p>
+                        <p class="card-text vehicle-description">@vehicle.Description</p>
                     </div>
                     <div class="card-footer">
                         <div class="d-flex justify-content-between align-items-center">
@@ -67,7 +113,6 @@
                             }
                         </div>
                         <div class="mt-2">
-                            <!-- BUTON RENT CARE TE DUCE DIRECT LA PAGINA DE RENT -->
                             @if (vehicle.IsAvailable)
                             {
                                 <a href="@Url.Action("Rent", "Rental", new { id = vehicle.Id })"
@@ -126,33 +171,300 @@
         .card:hover {
             box-shadow: 0 8px 15px rgba(0,0,0,0.2);
         }
+
+    /* Autocomplete styles */
+    .autocomplete-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 0 0 4px 4px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .autocomplete-item {
+        padding: 10px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid #f5f5f5;
+        transition: background-color 0.2s;
+    }
+
+        .autocomplete-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .autocomplete-item.highlight {
+            background-color: #e9ecef;
+        }
+
+    .autocomplete-category {
+        padding: 8px 15px;
+        background-color: #f8f9fa;
+        font-weight: bold;
+        color: #495057;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .vehicle-description {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        height: 48px;
+    }
 </style>
 
 @section Scripts {
     <script>
-        // Simple search functionality
-        document.getElementById('searchButton').addEventListener('click', function() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const vehicleCards = document.querySelectorAll('.vehicle-card');
+        // Cache pentru sugestii
+        let vehicleSuggestions = [];
 
-            vehicleCards.forEach(card => {
-                const text = card.textContent.toLowerCase();
-                if (text.includes(searchTerm)) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
+        // Inițializare sugestii din datele existente
+        document.addEventListener('DOMContentLoaded', function() {
+            // Extrage toate datele din carduri
+            const cards = document.querySelectorAll('.vehicle-card');
+            vehicleSuggestions = [];
+
+            cards.forEach(card => {
+                const brand = card.dataset.brand || '';
+                const model = card.dataset.model || '';
+                const year = card.dataset.year || '';
+                const color = card.dataset.color || '';
+                const branch = card.dataset.branch || '';
+
+                // Adaugă sugestii unice
+                if (brand && !vehicleSuggestions.some(s => s.text === brand)) {
+                    vehicleSuggestions.push({ text: brand, type: 'brand' });
+                }
+                if (model && !vehicleSuggestions.some(s => s.text === model)) {
+                    vehicleSuggestions.push({ text: model, type: 'model' });
+                }
+                if (color && !vehicleSuggestions.some(s => s.text === color)) {
+                    vehicleSuggestions.push({ text: color, type: 'color' });
+                }
+                if (branch && !vehicleSuggestions.some(s => s.text === branch)) {
+                    vehicleSuggestions.push({ text: branch, type: 'branch' });
+                }
+                if (year && !vehicleSuggestions.some(s => s.text === year.toString())) {
+                    vehicleSuggestions.push({ text: year.toString(), type: 'year' });
                 }
             });
+
+            // Sortare alfabetică
+            vehicleSuggestions.sort((a, b) => a.text.localeCompare(b.text));
+
+            initializeAutocomplete();
+            initializeFilters();
         });
 
-        // Search on Enter key
-        document.getElementById('searchInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                document.getElementById('searchButton').click();
+        function initializeAutocomplete() {
+            const searchInput = document.getElementById('searchInput');
+            const autocompleteResults = document.getElementById('autocompleteResults');
+            let selectedIndex = -1;
+
+            searchInput.addEventListener('input', function() {
+                const query = this.value.toLowerCase().trim();
+
+                if (query.length < 1) {
+                    autocompleteResults.style.display = 'none';
+                    return;
+                }
+
+              
+                const filtered = vehicleSuggestions.filter(suggestion =>
+                    suggestion.text.toLowerCase().includes(query)
+                );
+
+               
+                const grouped = {};
+                filtered.forEach(suggestion => {
+                    if (!grouped[suggestion.type]) {
+                        grouped[suggestion.type] = [];
+                    }
+                    grouped[suggestion.type].push(suggestion);
+                });
+
+                
+                if (Object.keys(grouped).length > 0) {
+                    let html = '';
+
+                   
+                    const categoryOrder = ['brand', 'model', 'color', 'year', 'branch'];
+
+                    categoryOrder.forEach(category => {
+                        if (grouped[category]) {
+                            const categoryName = {
+                                'brand': 'Brands',
+                                'model': 'Models',
+                                'color': 'Colors',
+                                'year': 'Years',
+                                'branch': 'Branches'
+                            }[category];
+
+                            html += `<div class="autocomplete-category">${categoryName}</div>`;
+
+                            grouped[category].forEach((suggestion, index) => {
+                                const isHighlight = (selectedIndex === Object.keys(grouped).indexOf(category) + index);
+                                html += `<div class="autocomplete-item ${isHighlight ? 'highlight' : ''}"
+                                           data-value="${suggestion.text}">${suggestion.text}</div>`;
+                            });
+                        }
+                    });
+
+                    autocompleteResults.innerHTML = html;
+                    autocompleteResults.style.display = 'block';
+
+                    document.querySelectorAll('.autocomplete-item').forEach((item, index) => {
+                        item.addEventListener('click', function() {
+                            searchInput.value = this.dataset.value;
+                            performSearch(this.dataset.value);
+                            autocompleteResults.style.display = 'none';
+                        });
+                    });
+                } else {
+                    autocompleteResults.style.display = 'none';
+                }
+            });
+
+            
+            searchInput.addEventListener('keydown', function(e) {
+                const items = document.querySelectorAll('.autocomplete-item');
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                    updateHighlight(items);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedIndex = Math.max(selectedIndex - 1, -1);
+                    updateHighlight(items);
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (selectedIndex >= 0 && items[selectedIndex]) {
+                        searchInput.value = items[selectedIndex].dataset.value;
+                        performSearch(items[selectedIndex].dataset.value);
+                        autocompleteResults.style.display = 'none';
+                    } else {
+                        performSearch(searchInput.value);
+                        autocompleteResults.style.display = 'none';
+                    }
+                } else if (e.key === 'Escape') {
+                    autocompleteResults.style.display = 'none';
+                    selectedIndex = -1;
+                }
+            });
+
+            
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !autocompleteResults.contains(e.target)) {
+                    autocompleteResults.style.display = 'none';
+                    selectedIndex = -1;
+                }
+            });
+
+            
+            document.getElementById('searchButton').addEventListener('click', function() {
+                performSearch(searchInput.value);
+                autocompleteResults.style.display = 'none';
+            });
+
+            
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && autocompleteResults.style.display === 'none') {
+                    performSearch(this.value);
+                }
+            });
+        }
+
+        function updateHighlight(items) {
+            items.forEach((item, index) => {
+                item.classList.toggle('highlight', index === selectedIndex);
+            });
+        }
+
+        function initializeFilters() {
+            const filters = ['brandFilter', 'yearFilter', 'availabilityFilter'];
+
+            filters.forEach(filterId => {
+                document.getElementById(filterId).addEventListener('change', function() {
+                    applyAllFilters();
+                });
+            });
+        }
+
+        function applyAllFilters() {
+            const brand = document.getElementById('brandFilter').value.toLowerCase();
+            const year = document.getElementById('yearFilter').value;
+            const availability = document.getElementById('availabilityFilter').value;
+
+            const cards = document.querySelectorAll('.vehicle-card');
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                const cardBrand = card.dataset.brand.toLowerCase();
+                const cardYear = card.dataset.year;
+                const cardAvailable = card.dataset.available;
+
+                let show = true;
+
+                
+                if (brand && !cardBrand.includes(brand)) show = false;
+                if (year && cardYear !== year) show = false;
+                if (availability === 'available' && cardAvailable !== 'true') show = false;
+                if (availability === 'rented' && cardAvailable !== 'false') show = false;
+
+                card.style.display = show ? 'block' : 'none';
+                if (show) visibleCount++;
+            });
+
+            
+            document.getElementById('vehicleCount').textContent = `${visibleCount} vehicles`;
+        }
+
+        function performSearch(query) {
+            const searchTerm = query.toLowerCase().trim();
+            const brandFilter = document.getElementById('brandFilter').value.toLowerCase();
+            const yearFilter = document.getElementById('yearFilter').value;
+            const availabilityFilter = document.getElementById('availabilityFilter').value;
+
+            const cards = document.querySelectorAll('.vehicle-card');
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                const cardBrand = card.dataset.brand.toLowerCase();
+                const cardYear = card.dataset.year;
+                const cardAvailable = card.dataset.available;
+
+                let show = text.includes(searchTerm);
+
+                
+                if (brandFilter && !cardBrand.includes(brandFilter)) show = false;
+                if (yearFilter && cardYear !== yearFilter) show = false;
+                if (availabilityFilter === 'available' && cardAvailable !== 'true') show = false;
+                if (availabilityFilter === 'rented' && cardAvailable !== 'false') show = false;
+
+                card.style.display = show ? 'block' : 'none';
+                if (show) visibleCount++;
+            });
+
+           
+            document.getElementById('vehicleCount').textContent = `${visibleCount} vehicles`;
+
+            
+            if (searchTerm) {
+                document.getElementById('vehicleGrid').scrollIntoView({ behavior: 'smooth' });
             }
-        });
+        }
 
-        // Image error handling
+        /
         document.addEventListener('DOMContentLoaded', function() {
             const images = document.querySelectorAll('.vehicle-image');
             images.forEach(img => {
