@@ -7,6 +7,38 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <style>
+        .navbar .profile-img {
+            width: 32px;
+            height: 32px;
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .dropdown-menu .profile-img {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 10px;
+        }
+
+        .user-bio-preview {
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 0.85rem;
+        }
+
+        
+        .badge-blacklist {
+            background-color: #dc3545;
+            color: white;
+            font-size: 0.7em;
+            padding: 2px 6px;
+            margin-left: 5px;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -27,21 +59,16 @@
 
                         @if (User.Identity.IsAuthenticated)
                         {
-                            <!-- All Users: View Profile și My Rentals -->
-                            <li class="nav-item">
-                                <a class="nav-link text-light" asp-area="Identity" asp-page="/Account/Manage/Index">
-                                    <i class="fas fa-user"></i> View Profile
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-light" asp-area="" asp-controller="Rental" asp-action="MyRentals">
-                                    <i class="fas fa-car"></i> My Rentals
-                                </a>
-                            </li>
-
-                            <!-- Admin & Employee: Add Cars, Car Stocks, Rented Cars -->
+                           
                             @if (User.IsInRole("Admin") || User.IsInRole("Employee"))
                             {
+                               
+                                <li class="nav-item">
+                                    <a class="nav-link text-light" asp-controller="Blacklist" asp-action="Index">
+                                        <i class="fas fa-ban"></i> Blacklist
+                                    </a>
+                                </li>
+
                                 <li class="nav-item">
                                     <a class="nav-link text-light" asp-controller="Vehicle" asp-action="Create">
                                         <i class="fas fa-plus"></i> Add Cars
@@ -59,7 +86,6 @@
                                 </li>
                             }
 
-                            <!-- Admin Only: Admin Panel -->
                             @if (User.IsInRole("Admin"))
                             {
                                 <li class="nav-item">
@@ -74,18 +100,149 @@
                     <ul class="navbar-nav">
                         @if (User.Identity.IsAuthenticated)
                         {
-                            <li class="nav-item">
-                                <span class="nav-link text-light">Hello, @User.Identity.Name!</span>
-                            </li>
-                            <li class="nav-item">
-                                <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
-                                    <button type="submit" class="nav-link btn btn-link text-light">Logout</button>
-                                </form>
+                            
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-light d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    @{
+                                        
+                                        var userManager = Context.RequestServices.GetService<UserManager<ApplicationUser>>();
+                                        var currentUser = await userManager.GetUserAsync(User);
+                                        var profilePic = currentUser?.ProfilePicture ?? "default.png";
+                                        var displayName = User.Identity.Name;
+                                    }
+
+                                   
+                                    <img src="~/images/profile-pictures/@profilePic"
+                                         class="profile-img rounded-circle me-2"
+                                         alt="Profile">
+
+                                    
+                                    <span class="d-none d-sm-inline">@displayName</span>
+
+                                    
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <span class="badge bg-danger ms-1">Admin</span>
+                                    }
+                                    else if (User.IsInRole("Employee"))
+                                    {
+                                        <span class="badge bg-warning ms-1">Employee</span>
+                                    }
+                                </a>
+
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                                    <li>
+                                        <div class="px-4 py-3 text-center">
+                                            
+                                            <img src="~/images/profile-pictures/@profilePic"
+                                                 class="profile-img rounded-circle mb-2"
+                                                 alt="Profile">
+                                            <h6 class="mb-0">@displayName</h6>
+
+                                            
+                                            @if (User.IsInRole("Admin"))
+                                            {
+                                                <span class="badge bg-danger">Administrator</span>
+                                            }
+                                            else if (User.IsInRole("Employee"))
+                                            {
+                                                <span class="badge bg-warning">Employee</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Customer</span>
+                                            }
+
+                                            
+                                            @if (!string.IsNullOrEmpty(currentUser?.Biography))
+                                            {
+                                                <p class="text-muted user-bio-preview mb-0 mt-2"
+                                                   title="@currentUser.Biography">
+                                                    @currentUser.Biography
+                                                </p>
+                                            }
+                                            else
+                                            {
+                                                <p class="text-muted small mb-0 mt-2">No biography</p>
+                                            }
+                                        </div>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+
+                                   
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Identity" asp-page="/Account/Manage/Index">
+                                            <i class="fas fa-user-cog me-2"></i>Edit Profile
+                                        </a>
+                                    </li>
+
+                                    
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Rental" asp-action="MyRentals">
+                                            <i class="fas fa-car me-2"></i>My Rentals
+                                        </a>
+                                    </li>
+
+                                    
+                                    @if (User.IsInRole("Admin") || User.IsInRole("Employee"))
+                                    {
+                                        <li><hr class="dropdown-divider"></li>
+
+                                        
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Blacklist" asp-action="Index">
+                                                <i class="fas fa-ban me-2 text-danger"></i>Manage Blacklist
+                                            </a>
+                                        </li>
+
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Vehicle" asp-action="Create">
+                                                <i class="fas fa-plus me-2"></i>Add Cars
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Vehicle" asp-action="Index">
+                                                <i class="fas fa-car me-2"></i>Car Stocks
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Rental" asp-action="Index">
+                                                <i class="fas fa-list me-2"></i>Rented Cars
+                                            </a>
+                                        </li>
+                                    }
+
+                                   
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Branch" asp-action="Index">
+                                                <i class="fas fa-cog me-2"></i>Admin Panel
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="User" asp-action="Index">
+                                                <i class="fas fa-users me-2"></i>Manage Users
+                                            </a>
+                                        </li>
+                                    }
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <!-- Logout -->
+                                    <li>
+                                        <form class="form-inline px-3" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
+                                            <button type="submit" class="dropdown-item btn btn-link p-0 text-start">
+                                                <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
                             </li>
                         }
                         else
                         {
-                            <!-- Logged Out State: Login și Register în dreapta -->
+                            <!-- Logged Out State -->
                             <li class="nav-item">
                                 <a class="nav-link text-light" asp-area="Identity" asp-page="/Account/Login">Login</a>
                             </li>
@@ -99,9 +256,9 @@
         </nav>
     </header>
 
+    
     <div class="container">
         <main role="main" class="pb-3">
-
             @if (TempData["SuccessMessage"] != null)
             {
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
