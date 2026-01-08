@@ -18,6 +18,8 @@ namespace CarRentPro.Models
 
         public DbSet<BlacklistEntry> BlacklistEntries { get; set; }
 
+        public DbSet<PredefinedProfilePicture> PredefinedProfilePictures { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -72,6 +74,16 @@ namespace CarRentPro.Models
             builder.Entity<BlacklistEntry>()
                 .HasIndex(b => new { b.UserId, b.IsActive, b.ExpirationDate })
                 .HasDatabaseName("IX_Blacklist_ActiveCheck");
+
+            builder.Entity<PredefinedProfilePicture>()
+                .Property(p => p.ImageName)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            builder.Entity<PredefinedProfilePicture>()
+                .Property(p => p.ImagePath)
+                .IsRequired()
+                .HasMaxLength(200);
         }
     }
 }
