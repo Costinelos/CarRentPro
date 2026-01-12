@@ -11,5 +11,8 @@ namespace CarRentPro.Repositories
         Task<Vehicle> UpdateVehicleAsync(Vehicle vehicle);
         Task<bool> DeleteVehicleAsync(int id);
         Task<List<Vehicle>> GetVehiclesByBranchAsync(int branchId);
+        Task<bool> HasActiveRentalsAsync(int vehicleId);
+        Task<bool> HasAnyRentalsAsync(int vehicleId);
+        Task<bool> ForceDeleteVehicleAsync(int id);
     }
 }

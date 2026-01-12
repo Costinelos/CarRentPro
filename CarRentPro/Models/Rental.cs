@@ -17,8 +17,8 @@ namespace CarRentPro.Models
         public string UserId { get; set; }
         public virtual ApplicationUser User { get; set; }
 
-        public int VehicleId { get; set; }
-        public virtual Vehicle Vehicle { get; set; }
+        public int? VehicleId { get; set; }
+        public virtual Vehicle? Vehicle { get; set; }
 
         
         public bool IsActive()

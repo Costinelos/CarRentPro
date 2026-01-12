@@ -2,6 +2,10 @@
 
 @{
     ViewData["Title"] = "Home Page";
+
+    // Extrage marca si anii pt dropdown
+    var allBrands = Model.Select(v => v.Brand).Distinct().OrderBy(b => b).ToList();
+    var allYears = Model.Select(v => v.Year).Distinct().OrderByDescending(y => y).ToList();
 }
 
 <div class="container">
@@ -11,137 +15,205 @@
             <h1 class="display-4 mb-4">Welcome to CarRentPro</h1>
             <p class="lead">Find the perfect car for your journey</p>
 
-            <!-- Search Bar with Autocomplete -->
+            <!-- Search Form -->
             <div class="row justify-content-center mb-4">
-                <div class="col-md-8">
-                    <div class="position-relative">
-                        <div class="input-group">
-                            <input type="text"
-                                   class="form-control"
-                                   placeholder="Search by brand, model, color, year..."
-                                   id="searchInput"
-                                   autocomplete="off">
-                            <button class="btn btn-primary" type="button" id="searchButton">
-                                <i class="fas fa-search"></i> Search
-                            </button>
+                <div class="col-md-10">
+                    <!-- Search Form -->
+                    <form method="get" asp-controller="Vehicle" asp-action="Search" class="card p-4 shadow-sm mb-3" id="searchForm">
+                        <div class="row g-3">
+                            <!-- Search Input -->
+                            <div class="col-md-8">
+                                <label class="form-label">Search Vehicles</label>
+                                <div class="input-group position-relative">
+                                    <input type="text"
+                                           class="form-control"
+                                           name="searchTerm"
+                                           placeholder="Search by brand, model, color, year..."
+                                           id="searchInput"
+                                           autocomplete="off"
+                                           value="@Context.Request.Query["searchTerm"]">
+                                    <button class="btn btn-primary" type="submit" id="searchButton">
+                                        <i class="fas fa-search"></i> Search
+                                    </button>
+
+                                    <!-- Autocomplete Dropdown -->
+                                    <div id="autocompleteResults" class="autocomplete-dropdown"></div>
+                                </div>
+                            </div>
+
+                            
+                           
                         </div>
 
-                        <!-- Autocomplete Dropdown -->
-                        <div id="autocompleteResults" class="autocomplete-dropdown"></div>
-                    </div>
+                        <!-- Advanced Filters (Collapsible) -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <a class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" href="#advancedFilters" role="button">
+                                    <i class="fas fa-filter"></i> Advanced Filters
+                                </a>
 
-                    <!-- Search Filters -->
-                    <div class="row mt-3">
-                        <div class="col-md-4">
-                            <select class="form-select form-select-sm" id="brandFilter">
-                                <option value="">All Brands</option>
-                                @foreach (var brand in Model.Select(v => v.Brand).Distinct())
-                                {
-                                    <option value="@brand">@brand</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <select class="form-select form-select-sm" id="yearFilter">
-                                <option value="">All Years</option>
-                                @foreach (var year in Model.Select(v => v.Year).Distinct().OrderByDescending(y => y))
-                                {
-                                    <option value="@year">@year</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <select class="form-select form-select-sm" id="availabilityFilter">
-                                <option value="">All</option>
-                                <option value="available">Available Only</option>
-                                <option value="rented">Rented</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+                                <div class="collapse mt-3" id="advancedFilters">
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label">Brand</label>
+                                            <select class="form-select" name="brandFilter" id="brandFilter">
+                                                <option value="">All Brands</option>
+                                                @foreach (var brand in allBrands)
+                                                {
+                                                    <option value="@brand">@brand</option>
+                                                }
+                                            </select>
+                                        </div>
 
-    <!-- Available Vehicles Section -->
-    <div class="row">
-        <div class="col-12 d-flex justify-content-between align-items-center mb-4">
-            <h2 class="mb-0">Available Vehicles</h2>
-            <div>
-                <span id="vehicleCount" class="badge bg-secondary">@Model.Count() vehicles</span>
-            </div>
-        </div>
-    </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Year</label>
+                                            <select class="form-select" name="yearFilter" id="yearFilter">
+                                                <option value="">All Years</option>
+                                                @foreach (var year in allYears)
+                                                {
+                                                    <option value="@year">@year</option>
+                                                }
+                                            </select>
+                                        </div>
 
-    <div class="row" id="vehicleGrid">
-        @foreach (var vehicle in Model)
-        {
-            <div class="col-md-3 mb-4 vehicle-card"
-                 data-brand="@vehicle.Brand"
-                 data-model="@vehicle.Model"
-                 data-year="@vehicle.Year"
-                 data-color="@vehicle.Color"
-                 data-branch="@vehicle.Branch?.Name"
-                 data-available="@vehicle.IsAvailable.ToString().ToLower()">
-                <div class="card h-100">
-                    <img src="@vehicle.ImageUrl"
-                         class="card-img-top vehicle-image"
-                         alt="@vehicle.Brand @vehicle.Model"
-                         onerror="this.onerror=null; this.src='/images/vehicles/default-car.jpg'">
+                                        <div class="col-md-4">
+                                            <label class="form-label">Price Range</label>
+                                            <select class="form-select" name="priceFilter" id="priceFilter">
+                                                <option value="">Any Price</option>
+                                                <option value="0-50">$0 - $50</option>
+                                                <option value="51-100">$51 - $100</option>
+                                                <option value="101-200">$101 - $200</option>
+                                                <option value="201-500">$201 - $500</option>
+                                                <option value="501+">$501+</option>
+                                            </select>
+                                        </div>
+                                    </div>
 
-                    <div class="card-body">
-                        <h5 class="card-title">@vehicle.Brand @vehicle.Model</h5>
-                        <p class="card-text">
-                            <small class="text-muted">
-                                <i class="fas fa-calendar-alt"></i> @vehicle.Year<br>
-                                <i class="fas fa-palette"></i> @vehicle.Color<br>
-                                <i class="fas fa-map-marker-alt"></i> @vehicle.Branch?.Name
-                            </small>
-                        </p>
-                        <p class="card-text vehicle-description">@vehicle.Description</p>
-                    </div>
-                    <div class="card-footer">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="h5 mb-0 text-primary">$@vehicle.PricePerDay/day</span>
-                            @if (vehicle.IsAvailable)
-                            {
-                                <span class="badge bg-success">Available</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-danger">Rented</span>
-                            }
+                                    <div class="row mt-3">
+                                        <div class="col-12 text-end">
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="fas fa-search"></i> Apply Filters
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" onclick="clearFilters()">
+                                                <i class="fas fa-times"></i> Clear
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+                    </form>
+
+                    <!-- Quick Search Tags -->
+                    <div class="text-center">
+                        <small class="text-muted">Quick search:</small>
                         <div class="mt-2">
-                            @if (vehicle.IsAvailable)
+                            @foreach (var brand in allBrands.Take(5))
                             {
-                                <a href="@Url.Action("Rent", "Rental", new { id = vehicle.Id })"
-                                   class="btn btn-primary btn-sm w-100">
-                                    <i class="fas fa-car"></i> Rent Now
+                                <a href="@Url.Action("Search", "Vehicle", new { searchTerm = brand })" class="btn btn-sm btn-outline-primary me-2 mb-2">
+                                    @brand
                                 </a>
                             }
-                            else
-                            {
-                                <a href="@Url.Action("Details", "Vehicle", new { id = vehicle.Id })"
-                                   class="btn btn-secondary btn-sm w-100">
-                                    <i class="fas fa-info-circle"></i> View Details
-                                </a>
-                            }
+                            <a href="@Url.Action("Search", "Vehicle", new { availabilityFilter = "available" })" class="btn btn-sm btn-outline-success me-2 mb-2">
+                                <i class="fas fa-check"></i> Available
+                            </a>
+                            <a href="@Url.Action("Search", "Vehicle", new { yearFilter = DateTime.Now.Year.ToString() })" class="btn btn-sm btn-outline-info me-2 mb-2">
+                                New @DateTime.Now.Year
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
-        }
+        </div>
     </div>
 
-    @if (!Model.Any())
+    
+
+    <!-- Vehicle Grid -->
+    @if (Model.Any())
+    {
+        <div class="row" id="vehicleGrid">
+            @foreach (var vehicle in Model)
+            {
+                <div class="col-lg-3 col-md-4 col-sm-6 mb-4 vehicle-card"
+                     data-brand="@vehicle.Brand"
+                     data-model="@vehicle.Model"
+                     data-year="@vehicle.Year"
+                     data-color="@vehicle.Color"
+                     data-price="@vehicle.PricePerDay"
+                     data-branch="@vehicle.Branch?.Name"
+                     data-available="@vehicle.IsAvailable.ToString().ToLower()">
+                    <div class="card h-100 shadow-sm">
+                        <img src="@vehicle.ImageUrl"
+                             class="card-img-top vehicle-image"
+                             alt="@vehicle.Brand @vehicle.Model"
+                             onerror="this.onerror=null; this.src='/images/vehicles/default-car.jpg'">
+
+                        <div class="card-body">
+                            <h5 class="card-title">@vehicle.Brand @vehicle.Model</h5>
+                            <p class="card-text">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar-alt"></i> @vehicle.Year<br>
+                                    <i class="fas fa-palette"></i> @vehicle.Color<br>
+                                    <i class="fas fa-map-marker-alt"></i> @vehicle.Branch?.Name
+                                </small>
+                            </p>
+                            <p class="card-text vehicle-description">@vehicle.Description</p>
+                        </div>
+                        <div class="card-footer">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="h5 mb-0 text-primary">$@string.Format("{0:F2}", vehicle.PricePerDay)/day</span>
+                                @if (vehicle.IsAvailable)
+                                {
+                                    <span class="badge bg-success">Available</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Rented</span>
+                                }
+                            </div>
+                            <div class="mt-2">
+                                @if (vehicle.IsAvailable)
+                                {
+                                    <a href="@Url.Action("Rent", "Rental", new { id = vehicle.Id })"
+                                       class="btn btn-primary btn-sm w-100">
+                                        <i class="fas fa-car"></i> Rent Now
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a href="@Url.Action("Details", "Vehicle", new { id = vehicle.Id })"
+                                       class="btn btn-secondary btn-sm w-100">
+                                        <i class="fas fa-info-circle"></i> View Details
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
     {
         <div class="row">
             <div class="col-12 text-center">
                 <div class="alert alert-info">
-                    <h4>No vehicles available at the moment</h4>
-                    <p>Please check back later or contact us for more information.</p>
+                    <h4><i class="fas fa-car me-2"></i>No vehicles available at the moment</h4>
+                    <p>Please check back later or try our <a href="@Url.Action("Search", "Vehicle")" class="alert-link">advanced search</a>.</p>
                 </div>
+            </div>
+        </div>
+    }
+
+    <!-- View All Button -->
+    @if (Model.Any())
+    {
+        <div class="row mt-4">
+            <div class="col-12 text-center">
+                <a href="@Url.Action("Search", "Vehicle")" class="btn btn-outline-primary">
+                    <i class="fas fa-list"></i> View All Vehicles
+                </a>
             </div>
         </div>
     }
@@ -223,12 +295,11 @@
 
 @section Scripts {
     <script>
-        // Cache pentru sugestii
+     
         let vehicleSuggestions = [];
 
-        // Inițializare sugestii din datele existente
         document.addEventListener('DOMContentLoaded', function() {
-            // Extrage toate datele din carduri
+        
             const cards = document.querySelectorAll('.vehicle-card');
             vehicleSuggestions = [];
 
@@ -238,8 +309,9 @@
                 const year = card.dataset.year || '';
                 const color = card.dataset.color || '';
                 const branch = card.dataset.branch || '';
+                const price = card.dataset.price || '';
 
-                // Adaugă sugestii unice
+               
                 if (brand && !vehicleSuggestions.some(s => s.text === brand)) {
                     vehicleSuggestions.push({ text: brand, type: 'brand' });
                 }
@@ -257,11 +329,11 @@
                 }
             });
 
-            // Sortare alfabetică
+           
             vehicleSuggestions.sort((a, b) => a.text.localeCompare(b.text));
 
             initializeAutocomplete();
-            initializeFilters();
+            populateFilterValuesFromUrl();
         });
 
         function initializeAutocomplete() {
@@ -277,12 +349,10 @@
                     return;
                 }
 
-              
                 const filtered = vehicleSuggestions.filter(suggestion =>
                     suggestion.text.toLowerCase().includes(query)
                 );
 
-               
                 const grouped = {};
                 filtered.forEach(suggestion => {
                     if (!grouped[suggestion.type]) {
@@ -291,11 +361,9 @@
                     grouped[suggestion.type].push(suggestion);
                 });
 
-                
                 if (Object.keys(grouped).length > 0) {
                     let html = '';
 
-                   
                     const categoryOrder = ['brand', 'model', 'color', 'year', 'branch'];
 
                     categoryOrder.forEach(category => {
@@ -324,8 +392,11 @@
                     document.querySelectorAll('.autocomplete-item').forEach((item, index) => {
                         item.addEventListener('click', function() {
                             searchInput.value = this.dataset.value;
-                            performSearch(this.dataset.value);
                             autocompleteResults.style.display = 'none';
+                            
+                            setTimeout(() => {
+                                document.getElementById('searchForm').submit();
+                            }, 100);
                         });
                     });
                 } else {
@@ -333,7 +404,6 @@
                 }
             });
 
-            
             searchInput.addEventListener('keydown', function(e) {
                 const items = document.querySelectorAll('.autocomplete-item');
 
@@ -349,11 +419,10 @@
                     e.preventDefault();
                     if (selectedIndex >= 0 && items[selectedIndex]) {
                         searchInput.value = items[selectedIndex].dataset.value;
-                        performSearch(items[selectedIndex].dataset.value);
                         autocompleteResults.style.display = 'none';
+                        document.getElementById('searchForm').submit();
                     } else {
-                        performSearch(searchInput.value);
-                        autocompleteResults.style.display = 'none';
+                        document.getElementById('searchForm').submit();
                     }
                 } else if (e.key === 'Escape') {
                     autocompleteResults.style.display = 'none';
@@ -361,7 +430,7 @@
                 }
             });
 
-            
+           
             document.addEventListener('click', function(e) {
                 if (!searchInput.contains(e.target) && !autocompleteResults.contains(e.target)) {
                     autocompleteResults.style.display = 'none';
@@ -369,17 +438,9 @@
                 }
             });
 
-            
+           
             document.getElementById('searchButton').addEventListener('click', function() {
-                performSearch(searchInput.value);
-                autocompleteResults.style.display = 'none';
-            });
-
-            
-            searchInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter' && autocompleteResults.style.display === 'none') {
-                    performSearch(this.value);
-                }
+                document.getElementById('searchForm').submit();
             });
         }
 
@@ -389,89 +450,65 @@
             });
         }
 
-        function initializeFilters() {
-            const filters = ['brandFilter', 'yearFilter', 'availabilityFilter'];
+       
+        function populateFilterValuesFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
 
-            filters.forEach(filterId => {
-                document.getElementById(filterId).addEventListener('change', function() {
-                    applyAllFilters();
-                });
-            });
-        }
+            if (urlParams.has('brandFilter')) {
+                document.getElementById('brandFilter').value = urlParams.get('brandFilter');
+            }
 
-        function applyAllFilters() {
-            const brand = document.getElementById('brandFilter').value.toLowerCase();
-            const year = document.getElementById('yearFilter').value;
-            const availability = document.getElementById('availabilityFilter').value;
+            if (urlParams.has('yearFilter')) {
+                document.getElementById('yearFilter').value = urlParams.get('yearFilter');
+            }
 
-            const cards = document.querySelectorAll('.vehicle-card');
-            let visibleCount = 0;
+            if (urlParams.has('availabilityFilter')) {
+                document.getElementById('availabilityFilter').value = urlParams.get('availabilityFilter');
+            }
 
-            cards.forEach(card => {
-                const cardBrand = card.dataset.brand.toLowerCase();
-                const cardYear = card.dataset.year;
-                const cardAvailable = card.dataset.available;
+            if (urlParams.has('priceFilter')) {
+                document.getElementById('priceFilter').value = urlParams.get('priceFilter');
+            }
 
-                let show = true;
-
-                
-                if (brand && !cardBrand.includes(brand)) show = false;
-                if (year && cardYear !== year) show = false;
-                if (availability === 'available' && cardAvailable !== 'true') show = false;
-                if (availability === 'rented' && cardAvailable !== 'false') show = false;
-
-                card.style.display = show ? 'block' : 'none';
-                if (show) visibleCount++;
-            });
-
-            
-            document.getElementById('vehicleCount').textContent = `${visibleCount} vehicles`;
-        }
-
-        function performSearch(query) {
-            const searchTerm = query.toLowerCase().trim();
-            const brandFilter = document.getElementById('brandFilter').value.toLowerCase();
-            const yearFilter = document.getElementById('yearFilter').value;
-            const availabilityFilter = document.getElementById('availabilityFilter').value;
-
-            const cards = document.querySelectorAll('.vehicle-card');
-            let visibleCount = 0;
-
-            cards.forEach(card => {
-                const text = card.textContent.toLowerCase();
-                const cardBrand = card.dataset.brand.toLowerCase();
-                const cardYear = card.dataset.year;
-                const cardAvailable = card.dataset.available;
-
-                let show = text.includes(searchTerm);
-
-                
-                if (brandFilter && !cardBrand.includes(brandFilter)) show = false;
-                if (yearFilter && cardYear !== yearFilter) show = false;
-                if (availabilityFilter === 'available' && cardAvailable !== 'true') show = false;
-                if (availabilityFilter === 'rented' && cardAvailable !== 'false') show = false;
-
-                card.style.display = show ? 'block' : 'none';
-                if (show) visibleCount++;
-            });
-
-           
-            document.getElementById('vehicleCount').textContent = `${visibleCount} vehicles`;
-
-            
-            if (searchTerm) {
-                document.getElementById('vehicleGrid').scrollIntoView({ behavior: 'smooth' });
+            if (urlParams.has('searchTerm')) {
+                document.getElementById('searchInput').value = urlParams.get('searchTerm');
             }
         }
 
-        /
-        document.addEventListener('DOMContentLoaded', function() {
-            const images = document.querySelectorAll('.vehicle-image');
-            images.forEach(img => {
-                img.addEventListener('error', function() {
-                    this.src = '/images/vehicles/default-car.jpg';
-                });
+       
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('brandFilter').value = '';
+            document.getElementById('yearFilter').value = '';
+            document.getElementById('availabilityFilter').value = '';
+            document.getElementById('priceFilter').value = '';
+
+         
+            window.location.href = '@Url.Action("Index", "Home")';
+        }
+
+        
+        function performInstantSearch(query) {
+            const searchForm = document.getElementById('searchForm');
+            const searchInput = document.getElementById('searchInput');
+
+            if (searchInput.value !== query) {
+                searchInput.value = query;
+                searchForm.submit();
+            }
+        }
+
+        document.querySelectorAll('#brandFilter, #yearFilter, #availabilityFilter, #priceFilter').forEach(filter => {
+            filter.addEventListener('change', function() {
+                document.getElementById('searchForm').submit();
             });
+        });
+
+       
+        document.getElementById('searchForm').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && document.getElementById('autocompleteResults').style.display === 'block') {
+                e.preventDefault();
+            }
         });
     </script>
 }
