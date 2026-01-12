@@ -49,5 +49,16 @@ namespace CarRentPro.Services
         {
             return await _context.Branches.ToListAsync();
         }
+
+        public async Task<bool> HasActiveRentalsAsync(int vehicleId)
+        {
+            return await _vehicleRepository.HasActiveRentalsAsync(vehicleId);
+        }
+
+      
+        public async Task<bool> HasAnyRentalsAsync(int vehicleId)
+        {
+            return await _vehicleRepository.HasAnyRentalsAsync(vehicleId);
+        }
     }
 }

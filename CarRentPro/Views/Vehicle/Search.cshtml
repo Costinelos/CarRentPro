@@ -1,0 +1,512 @@
+﻿@model IEnumerable<CarRentPro.Models.Vehicle>
+@{
+    ViewData["Title"] = "Search Vehicles";
+
+    
+    var searchTerm = ViewBag.SearchTerm as string ?? "";
+    var brandFilter = ViewBag.BrandFilter as string ?? "";
+    var yearFilter = ViewBag.YearFilter as string ?? "";
+    var availabilityFilter = ViewBag.AvailabilityFilter as string ?? "";
+    var priceFilter = ViewBag.PriceFilter as string ?? "";
+    var branchId = ViewBag.BranchId as int?;
+    
+    var allBrands = ViewBag.AllBrands as List<string> ?? new List<string>();
+    var allYears = ViewBag.AllYears as List<int> ?? new List<int>();
+    var branches = ViewBag.Branches as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-search me-2"></i>Search Vehicles
+            </h1>
+
+            <!-- Search Form Card -->
+            <div class="card shadow-sm mb-5">
+                <div class="card-body">
+                    <form method="get" asp-action="Search" class="row g-3" id="searchForm">
+                        <!-- Search Input -->
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold">What are you looking for?</label>
+                            <div class="input-group">
+                                <input type="text"
+                                       class="form-control form-control-lg"
+                                       name="searchTerm"
+                                       placeholder="Search by brand, model, color, year, description..."
+                                       value="@searchTerm"
+                                       autocomplete="off">
+                                <button class="btn btn-primary btn-lg" type="submit">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Quick Availability Filter -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Availability</label>
+                            <select class="form-select form-select-lg" name="availabilityFilter">
+                                <option value="">All Vehicles</option>
+                                <option value="available" selected="@(availabilityFilter == "available")">Available Only</option>
+                                <option value="rented" selected="@(availabilityFilter == "rented")">Currently Rented</option>
+                            </select>
+                        </div>
+
+                        <!-- Advanced Filters -->
+                        <div class="col-12">
+                            <div class="accordion mt-4" id="accordionFilters">
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFilters">
+                                            <i class="fas fa-sliders-h me-2"></i> Advanced Filters
+                                        </button>
+                                    </h2>
+                                    <div id="collapseFilters" class="accordion-collapse collapse" data-bs-parent="#accordionFilters">
+                                        <div class="accordion-body">
+                                            <div class="row g-3">
+                                                <!-- Brand Filter -->
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Brand</label>
+                                                    <select class="form-select" name="brandFilter">
+                                                        <option value="">All Brands</option>
+                                                        @foreach (var brand in allBrands)
+                                                        {
+                                                            <option value="@brand" selected="@(brandFilter == brand)">@brand</option>
+                                                        }
+                                                    </select>
+                                                </div>
+
+                                                <!-- Year Filter -->
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Year</label>
+                                                    <select class="form-select" name="yearFilter">
+                                                        <option value="">All Years</option>
+                                                        @foreach (var year in allYears)
+                                                        {
+                                                            <option value="@year" selected="@(yearFilter == year.ToString())">@year</option>
+                                                        }
+                                                    </select>
+                                                </div>
+
+                                                <!-- Price Filter -->
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Price Range (per day)</label>
+                                                    <select class="form-select" name="priceFilter">
+                                                        <option value="">Any Price</option>
+                                                        <option value="0-50" selected="@(priceFilter == "0-50")">$0 - $50</option>
+                                                        <option value="51-100" selected="@(priceFilter == "51-100")">$51 - $100</option>
+                                                        <option value="101-200" selected="@(priceFilter == "101-200")">$101 - $200</option>
+                                                        <option value="201-500" selected="@(priceFilter == "201-500")">$201 - $500</option>
+                                                        <option value="501+" selected="@(priceFilter == "501+")">$501+</option>
+                                                    </select>
+                                                </div>
+
+                                                <!-- Branch Filter -->
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Branch Location</label>
+                                                    <select class="form-select" name="branchId">
+                                                        <option value="">All Branches</option>
+                                                        @foreach (var branch in branches)
+                                                        {
+                                                            <option value="@branch.Value" selected="@(branchId?.ToString() == branch.Value)">@branch.Text</option>
+                                                        }
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <!-- Action Buttons -->
+                                            <div class="row mt-4">
+                                                <div class="col-12 text-end">
+                                                    <button type="submit" class="btn btn-primary px-4">
+                                                        <i class="fas fa-search me-2"></i>Apply Filters
+                                                    </button>
+                                                    <a asp-action="Search" class="btn btn-outline-secondary px-4">
+                                                        <i class="fas fa-times me-2"></i>Clear All
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Quick Search Tags -->
+                    @if (allBrands.Any() || allYears.Any())
+                    {
+                        <div class="mt-4">
+                            <p class="text-muted mb-2">Quick search suggestions:</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <!-- Popular Brands -->
+                                @foreach (var brand in allBrands.Take(6))
+                                {
+                                    <a href="@Url.Action("Search", new { brandFilter = brand })"
+                                       class="btn btn-sm btn-outline-primary">
+                                        @brand
+                                    </a>
+                                }
+
+                                <!-- Latest Years -->
+                                @foreach (var year in allYears.Take(3))
+                                {
+                                    <a href="@Url.Action("Search", new { yearFilter = year })"
+                                       class="btn btn-sm btn-outline-info">
+                                        @year Models
+                                    </a>
+                                }
+
+                                <!-- Availability -->
+                                <a href="@Url.Action("Search", new { availabilityFilter = "available" })"
+                                   class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-check me-1"></i>Available Now
+                                </a>
+
+                                <!-- Price Ranges -->
+                                <a href="@Url.Action("Search", new { priceFilter = "0-50" })"
+                                   class="btn btn-sm btn-outline-warning">
+                                    <i class="fas fa-dollar-sign me-1"></i>Budget ($0-50)
+                                </a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Results Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-0">Search Results</h2>
+                    @if (!string.IsNullOrEmpty(searchTerm) || !string.IsNullOrEmpty(brandFilter) ||
+                    !string.IsNullOrEmpty(yearFilter) || !string.IsNullOrEmpty(availabilityFilter))
+                    {
+                        <p class="text-muted mb-0 mt-1">
+                            @if (!string.IsNullOrEmpty(searchTerm))
+                            {
+                                <span class="me-2">Search: <strong>"@searchTerm"</strong></span>
+                            }
+                            @if (!string.IsNullOrEmpty(brandFilter))
+                            {
+                                <span class="me-2">Brand: <strong>@brandFilter</strong></span>
+                            }
+                            @if (!string.IsNullOrEmpty(yearFilter))
+                            {
+                                <span class="me-2">Year: <strong>@yearFilter</strong></span>
+                            }
+                            @if (!string.IsNullOrEmpty(availabilityFilter))
+                            {
+                                <span class="me-2">Status: <strong>@(availabilityFilter == "available" ? "Available" : "Rented")</strong></span>
+                            }
+                        </p>
+                    }
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-primary fs-6 px-3 py-2">
+                        @Model.Count() vehicle@(Model.Count() != 1 ? "s" : "") found
+                    </span>
+                    <a href="@Url.Action("Index", "Home")" class="btn btn-outline-secondary ms-3">
+                        <i class="fas fa-home me-2"></i>Back to Home
+                    </a>
+                </div>
+            </div>
+
+            <!-- Results Grid -->
+            @if (Model.Any())
+            {
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4" id="vehicleGrid">
+                    @foreach (var vehicle in Model)
+                    {
+                        <div class="col">
+                            <div class="card h-100 shadow-sm border-0">
+                                <!-- Vehicle Image -->
+                                <div class="position-relative">
+                                    <img src="@vehicle.ImageUrl"
+                                         class="card-img-top"
+                                         alt="@vehicle.Brand @vehicle.Model"
+                                         style="height: 220px; object-fit: cover;"
+                                         onerror="this.onerror=null; this.src='/images/vehicles/default-car.jpg'">
+
+                                    <!-- Availability Badge -->
+                                    <div class="position-absolute top-0 end-0 m-3">
+                                        @if (vehicle.IsAvailable)
+                                        {
+                                            <span class="badge bg-success px-3 py-2">
+                                                <i class="fas fa-check-circle me-1"></i>Available
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger px-3 py-2">
+                                                <i class="fas fa-times-circle me-1"></i>Rented
+                                            </span>
+                                        }
+                                    </div>
+
+                                    <!-- Price Badge -->
+                                    <div class="position-absolute bottom-0 start-0 m-3">
+                                        <span class="badge bg-dark px-3 py-2 fs-6">
+                                            $@string.Format("{0:F2}", vehicle.PricePerDay)<small>/day</small>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Card Body -->
+                                <div class="card-body">
+                                    <h5 class="card-title mb-2">
+                                        @vehicle.Brand @vehicle.Model
+                                        <small class="text-muted d-block">@vehicle.Year • @vehicle.Color</small>
+                                    </h5>
+
+                                    <p class="card-text text-muted mb-3">
+                                        <i class="fas fa-map-marker-alt me-1"></i>@vehicle.Branch?.Name
+                                    </p>
+
+                                    <p class="card-text vehicle-description">@vehicle.Description</p>
+                                </div>
+
+                                <!-- Card Footer -->
+                                <div class="card-footer bg-transparent border-top-0 pt-0">
+                                    <div class="d-grid gap-2">
+                                        @if (vehicle.IsAvailable)
+                                        {
+                                            <a href="@Url.Action("Rent", "Rental", new { id = vehicle.Id })"
+                                               class="btn btn-primary btn-lg">
+                                                <i class="fas fa-car me-2"></i>Rent Now
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <a href="@Url.Action("Details", "Vehicle", new { id = vehicle.Id })"
+                                               class="btn btn-outline-primary btn-lg">
+                                                <i class="fas fa-info-circle me-2"></i>View Details
+                                            </a>
+                                        }
+
+                                        <a href="@Url.Action("Details", "Vehicle", new { id = vehicle.Id })"
+                                           class="btn btn-outline-secondary">
+                                            <i class="fas fa-eye me-2"></i>Quick View
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <!-- No Results Message -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <div class="mb-4">
+                            <i class="fas fa-search fa-4x text-muted mb-4"></i>
+                            <h3 class="text-muted">No vehicles found</h3>
+                            <p class="text-muted mb-4">
+                                Try adjusting your search criteria or clear some filters to see more results.
+                            </p>
+                        </div>
+
+                        <div class="d-flex justify-content-center gap-3">
+                            <a asp-action="Search" class="btn btn-outline-primary">
+                                <i class="fas fa-times me-2"></i>Clear All Filters
+                            </a>
+                            <a href="@Url.Action("Index", "Home")" class="btn btn-primary">
+                                <i class="fas fa-home me-2"></i>Back to Home
+                            </a>
+                        </div>
+
+                        <!-- Search Tips -->
+                        <div class="mt-5 pt-4 border-top">
+                            <h5 class="mb-3">Search Tips:</h5>
+                            <div class="row text-start">
+                                <div class="col-md-4 mb-3">
+                                    <div class="card border-0 bg-light">
+                                        <div class="card-body">
+                                            <h6><i class="fas fa-lightbulb text-warning me-2"></i>Try different keywords</h6>
+                                            <p class="small text-muted mb-0">Search by brand, model, color, or year</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="card border-0 bg-light">
+                                        <div class="card-body">
+                                            <h6><i class="fas fa-filter text-info me-2"></i>Use fewer filters</h6>
+                                            <p class="small text-muted mb-0">Try removing some filters to broaden your search</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="card border-0 bg-light">
+                                        <div class="card-body">
+                                            <h6><i class="fas fa-car text-success me-2"></i>Check availability</h6>
+                                            <p class="small text-muted mb-0">Make sure "Available Only" filter isn't too restrictive</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Back to Top Button -->
+            @if (Model.Any())
+            {
+                <div class="text-center mt-5">
+                    <a href="#top" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-up me-2"></i>Back to Top
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .vehicle-description {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        height: 72px;
+    }
+
+    .card {
+        transition: all 0.3s ease;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        }
+
+    .accordion-button:not(.collapsed) {
+        background-color: #f8f9fa;
+        color: #0d6efd;
+        box-shadow: none;
+    }
+
+    .accordion-button:focus {
+        box-shadow: none;
+        border-color: rgba(0,0,0,.125);
+    }
+
+    /* Custom badge styles */
+    .badge.bg-primary {
+        background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+    }
+
+    .badge.bg-success {
+        background: linear-gradient(135deg, #198754, #157347);
+    }
+
+    .badge.bg-danger {
+        background: linear-gradient(135deg, #dc3545, #bb2d3b);
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 768px) {
+        .card-img-top {
+            height: 180px !important;
+        }
+
+        .btn-lg {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+        }
+
+        .form-select-lg {
+            padding: 0.5rem 2.25rem 0.5rem 0.75rem;
+            font-size: 1rem;
+        }
+    }
+</style>
+
+@section Scripts {
+    <script>
+   
+        document.addEventListener('DOMContentLoaded', function() {
+   
+            const filters = document.querySelectorAll('select[name="availabilityFilter"], select[name="brandFilter"], select[name="yearFilter"], select[name="priceFilter"], select[name="branchId"]');
+
+            filters.forEach(filter => {
+                filter.addEventListener('change', function() {
+                    
+                    setTimeout(() => {
+                        document.getElementById('searchForm').submit();
+                    }, 300);
+                });
+            });
+
+         
+            const currentUrl = new URL(window.location.href);
+            const urlParams = new URLSearchParams(currentUrl.search);
+
+            
+            const activeFilters = {
+                'brandFilter': urlParams.get('brandFilter'),
+                'yearFilter': urlParams.get('yearFilter'),
+                'availabilityFilter': urlParams.get('availabilityFilter'),
+                'priceFilter': urlParams.get('priceFilter'),
+                'searchTerm': urlParams.get('searchTerm')
+            };
+
+            
+            document.querySelectorAll('.btn-outline-primary, .btn-outline-info, .btn-outline-success, .btn-outline-warning').forEach(btn => {
+                const href = btn.getAttribute('href');
+                if (href) {
+                    const btnUrl = new URL(href, window.location.origin);
+                    const btnParams = new URLSearchParams(btnUrl.search);
+
+                    let isActive = true;
+                    for (const [key, value] of btnParams.entries()) {
+                        if (activeFilters[key] !== value) {
+                            isActive = false;
+                            break;
+                        }
+                    }
+
+                    if (isActive) {
+                        btn.classList.remove('btn-outline-primary', 'btn-outline-info', 'btn-outline-success', 'btn-outline-warning');
+                        btn.classList.add('btn-primary');
+                    }
+                }
+            });
+
+            
+            if (activeFilters.brandFilter || activeFilters.yearFilter || activeFilters.priceFilter || (urlParams.get('branchId') && urlParams.get('branchId') !== '')) {
+                const collapseElement = document.getElementById('collapseFilters');
+                if (collapseElement) {
+                    const bsCollapse = new bootstrap.Collapse(collapseElement, {
+                        toggle: false
+                    });
+                    bsCollapse.show();
+                }
+            }
+
+         
+            document.querySelector('a[href="#top"]')?.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+       
+        let searchTimeout;
+        document.querySelector('input[name="searchTerm"]')?.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+              
+                if (this.value.length === 0 || this.value.length >= 3) {
+                    document.getElementById('searchForm').submit();
+                }
+            }, 1000);
+        });
+    </script>
+}
