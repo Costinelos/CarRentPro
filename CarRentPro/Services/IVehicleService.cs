@@ -1,4 +1,4 @@
-﻿using CarRentPro.Models;
+using CarRentPro.Models;
 
 namespace CarRentPro.Services
 {
@@ -12,6 +12,6 @@ namespace CarRentPro.Services
         Task<bool> DeleteVehicleAsync(int id);
         Task<List<Branch>> GetAllBranchesAsync();
         Task<bool> HasActiveRentalsAsync(int vehicleId);
-        Task<bool> HasAnyRentalsAsync(int vehicleId); 
+        Task<bool> HasAnyRentalsAsync(int vehicleId);
     }
 }

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -55,9 +55,6 @@
                         <li class="nav-item">
                             <a class="nav-link text-light" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
-
-              
-                        <!-- My Rentals a fost mutat în dropdown -->
                     </ul>
 
                     <ul class="navbar-nav">
@@ -113,7 +110,7 @@
                                             {
                                                 <p class="text-muted user-bio-preview mb-0 mt-2"
                                                    title="@currentUser.Biography">
-                                                    @currentUser.Biography
+                                                     @currentUser.Biography
                                                 </p>
                                             }
                                             else
@@ -124,29 +121,24 @@
                                     </li>
                                     <li><hr class="dropdown-divider"></li>
 
-                                    <!-- Edit Profile -->
                                     <li>
                                         <a class="dropdown-item" asp-area="Identity" asp-page="/Account/Manage/Index">
                                             <i class="fas fa-user-cog me-2"></i>Edit Profile
                                         </a>
                                     </li>
 
-                                    <!-- My Rentals (ACUM DOAR AICI ÎN DROPDOWN) -->
                                     <li>
                                         <a class="dropdown-item" asp-controller="Rental" asp-action="MyRentals">
                                             <i class="fas fa-car me-2"></i>My Rentals
                                         </a>
                                     </li>
 
-                                    <!-- TOATE linkurile pentru Employee/Admin -->
                                     @if (User.IsInRole("Admin") || User.IsInRole("Employee"))
                                     {
                                         <li><hr class="dropdown-divider"></li>
                                         <li class="dropdown-header">
                                             <i class="fas fa-tools me-2"></i>Management Tools
                                         </li>
-
-                                        <!-- Vehicle Management -->
                                         <li>
                                             <a class="dropdown-item" asp-controller="Vehicle" asp-action="Create">
                                                 <i class="fas fa-plus me-2"></i>Add New Car
@@ -157,15 +149,11 @@
                                                 <i class="fas fa-car me-2"></i>Manage Car Stocks
                                             </a>
                                         </li>
-
-                                        <!-- Rental Management -->
                                         <li>
                                             <a class="dropdown-item" asp-controller="Rental" asp-action="Index">
                                                 <i class="fas fa-list me-2"></i>View All Rentals
                                             </a>
                                         </li>
-
-                                        <!-- Blacklist Management -->
                                         <li>
                                             <a class="dropdown-item" asp-controller="Blacklist" asp-action="Index">
                                                 <i class="fas fa-ban me-2 text-danger"></i>Manage Blacklist
@@ -173,7 +161,6 @@
                                         </li>
                                     }
 
-                                    <!-- Linkuri EXCLUSIVE pentru Admin -->
                                     @if (User.IsInRole("Admin"))
                                     {
                                         <li><hr class="dropdown-divider"></li>
@@ -193,8 +180,6 @@
                                     }
 
                                     <li><hr class="dropdown-divider"></li>
-
-                                    <!-- Logout -->
                                     <li>
                                         <form class="form-inline px-3" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
                                             <button type="submit" class="dropdown-item btn btn-link p-0 text-start">
@@ -207,7 +192,6 @@
                         }
                         else
                         {
-                            <!-- Logged Out State -->
                             <li class="nav-item">
                                 <a class="nav-link text-light" asp-area="Identity" asp-page="/Account/Login">Login</a>
                             </li>
@@ -243,14 +227,66 @@
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
+    <footer class="mt-5 py-4 bg-dark text-white">
         <div class="container">
-            &copy; 2025 - CarRentPro - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            <div class="row">
+                <div class="col-md-4 mb-4 mb-md-0">
+                    <h5 class="mb-3"><i class="fas fa-car me-2"></i>CarRentPro</h5>
+                    <p class="mb-0">Your trusted partner for car rentals since 2010. We offer the best vehicles at competitive prices.</p>
+                </div>
+                <div class="col-md-2 mb-4 mb-md-0">
+                    <h5 class="mb-3">Quick Links</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a asp-controller="Home" asp-action="Index" class="text-white-50 text-decoration-none">Home</a></li>
+                        <li class="mb-2"><a asp-controller="Vehicle" asp-action="Search" class="text-white-50 text-decoration-none">Search</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3 mb-4 mb-md-0">
+                    <h5 class="mb-3">Contact Us</h5>
+                    <ul class="list-unstyled text-white-50">
+                        <li class="mb-2"><i class="fas fa-map-marker-alt me-2 text-primary"></i> Craiova, Dolj</li>
+                        <li class="mb-2"><i class="fas fa-phone me-2 text-primary"></i> +40 712 345 678</li>
+                        <li><i class="fas fa-envelope me-2 text-primary"></i> info@carrentpro.com</li>
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h5 class="mb-3">Business Hours</h5>
+                    <ul class="list-unstyled text-white-50 small">
+                        <li class="d-flex justify-content-between"><span>Mon - Fri:</span><span>8:00 - 20:00</span></li>
+                        <li class="d-flex justify-content-between"><span>Sat - Sun:</span><span>9:00 - 18:00</span></li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </footer>
 
+    <button type="button" class="btn btn-primary btn-floating btn-lg" id="back-to-top">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+        const backToTopButton = document.getElementById('back-to-top');
+        window.addEventListener('scroll', () => {
+            backToTopButton.style.display = window.pageYOffset > 300 ? 'flex' : 'none';
+        });
+        backToTopButton.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }, 5000);
+            });
+        });
+    </script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

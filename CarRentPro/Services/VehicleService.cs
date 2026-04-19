@@ -1,4 +1,4 @@
-﻿using CarRentPro.Models;
+using CarRentPro.Models;
 using CarRentPro.Repositories;
 using Microsoft.EntityFrameworkCore;
 
@@ -55,7 +55,6 @@ namespace CarRentPro.Services
             return await _vehicleRepository.HasActiveRentalsAsync(vehicleId);
         }
 
-      
         public async Task<bool> HasAnyRentalsAsync(int vehicleId)
         {
             return await _vehicleRepository.HasAnyRentalsAsync(vehicleId);

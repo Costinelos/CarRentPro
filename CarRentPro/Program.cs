@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using CarRentPro.Models;
 using CarRentPro.Repositories;
@@ -32,6 +32,8 @@ namespace CarRentPro
             builder.Services.AddScoped<IBranchService, BranchService>();
             builder.Services.AddScoped<IBlacklistService, BlacklistService>();
 
+            // Inregistrare Serviciu AI Groq (din branch-ul AI-and-multimedia)
+            builder.Services.AddScoped<IGroqService, GroqService>();
 
             builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
             {
@@ -42,7 +44,7 @@ namespace CarRentPro
                 options.Password.RequireUppercase = false;
                 options.Password.RequiredLength = 6;
             })
-            .AddRoles<IdentityRole>() 
+            .AddRoles<IdentityRole>()
             .AddEntityFrameworkStores<ApplicationDbContext>();
 
             var app = builder.Build();

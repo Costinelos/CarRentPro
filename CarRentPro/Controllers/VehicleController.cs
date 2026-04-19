@@ -1,9 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using CarRentPro.Models;
 using CarRentPro.Services;
 using CarRentPro.Repositories;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 
 namespace CarRentPro.Controllers
 {
@@ -36,16 +39,10 @@ namespace CarRentPro.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Details(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var vehicle = await _vehicleService.GetVehicleByIdAsync(id.Value);
-            if (vehicle == null)
-            {
-                return NotFound();
-            }
+            if (vehicle == null) return NotFound();
 
             return View(vehicle);
         }
@@ -61,7 +58,6 @@ namespace CarRentPro.Controllers
         public async Task<IActionResult> Create(Vehicle vehicle, IFormFile? imageFile)
         {
             _logger.LogInformation("=== VEHICLE CREATE START ===");
-            _logger.LogInformation($"ModelState IsValid: {ModelState.IsValid}");
 
             if (ModelState.IsValid)
             {
@@ -69,10 +65,8 @@ namespace CarRentPro.Controllers
                 {
                     if (imageFile != null && imageFile.Length > 0)
                     {
-                        vehicle.ImageUrl = await SaveImage(imageFile);
+                        vehicle.ImageUrl = await SaveImageWithWatermark(imageFile);
                     }
-
-                    _logger.LogInformation($"Creating vehicle: {vehicle.Brand} {vehicle.Model}, BranchId: {vehicle.BranchId}");
 
                     var branches = await _vehicleService.GetAllBranchesAsync();
                     var selectedBranch = branches.FirstOrDefault(b => b.Id == vehicle.BranchId);
@@ -97,11 +91,6 @@ namespace CarRentPro.Controllers
             else
             {
                 _logger.LogWarning("ModelState is invalid");
-                foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
-                {
-                    _logger.LogWarning($"Validation error: {error.ErrorMessage}");
-                }
-                TempData["ErrorMessage"] = "Please correct the validation errors.";
             }
 
             await LoadBranchesViewBag();
@@ -110,16 +99,10 @@ namespace CarRentPro.Controllers
 
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var vehicle = await _vehicleService.GetVehicleByIdAsync(id.Value);
-            if (vehicle == null)
-            {
-                return NotFound();
-            }
+            if (vehicle == null) return NotFound();
 
             await LoadBranchesViewBag();
             return View(vehicle);
@@ -129,34 +112,28 @@ namespace CarRentPro.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Vehicle vehicle, IFormFile? imageFile)
         {
-            if (id != vehicle.Id)
-            {
-                return NotFound();
-            }
+            if (id != vehicle.Id) return NotFound();
 
             if (ModelState.IsValid)
             {
                 try
                 {
+                    var existingVehicle = await _vehicleService.GetVehicleByIdAsync(id);
+                    if (existingVehicle == null) return NotFound();
+
                     if (imageFile == null || imageFile.Length == 0)
                     {
-                        var existingVehicle = await _vehicleService.GetVehicleByIdAsync(id);
-                        if (existingVehicle != null)
-                        {
-                            vehicle.ImageUrl = existingVehicle.ImageUrl;
-                        }
+                        vehicle.ImageUrl = existingVehicle.ImageUrl;
                     }
                     else
                     {
-                        var existingVehicle = await _vehicleService.GetVehicleByIdAsync(id);
-                        if (existingVehicle != null &&
-                            !string.IsNullOrEmpty(existingVehicle.ImageUrl) &&
+                        if (!string.IsNullOrEmpty(existingVehicle.ImageUrl) &&
                             existingVehicle.ImageUrl != "/images/vehicles/default-car.jpg")
                         {
                             DeleteOldImage(existingVehicle.ImageUrl);
                         }
 
-                        vehicle.ImageUrl = await SaveImage(imageFile);
+                        vehicle.ImageUrl = await SaveImageWithWatermark(imageFile);
                     }
 
                     await _vehicleService.UpdateVehicleAsync(vehicle);
@@ -183,199 +160,50 @@ namespace CarRentPro.Controllers
             return View(vehicle);
         }
 
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var vehicle = await _vehicleService.GetVehicleByIdAsync(id.Value);
-            if (vehicle == null)
-            {
-                return NotFound();
-            }
-
-            bool hasActiveRentals = await _vehicleService.HasActiveRentalsAsync(vehicle.Id);
-            bool hasAnyRentals = await _vehicleService.HasAnyRentalsAsync(vehicle.Id);
-
-            ViewBag.ForceDelete = true;
-            ViewBag.HasActiveRentals = hasActiveRentals;
-            ViewBag.HasAnyRentals = hasAnyRentals;
-            ViewBag.ForceDelete = false;
-
-            if (hasActiveRentals)
-            {
-                ViewBag.WarningMessage = "This vehicle has active or future rentals.";
-            }
-            else if (hasAnyRentals)
-            {
-                ViewBag.WarningMessage = "This vehicle has past rental history.";
-            }
-
-            return View(vehicle);
-        }
-
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id, bool forceDelete = false)
-        {
-            try
-            {
-                bool result;
-
-                if (forceDelete)
-                {
-                    _logger.LogWarning($"Force deleting vehicle ID: {id}");
-
-                    
-                    result = await _vehicleRepository.ForceDeleteVehicleAsync(id);
-
-                    if (result)
-                    {
-                        TempData["SuccessMessage"] = "Vehicle and all associated records deleted successfully!";
-                        _logger.LogInformation($"Vehicle {id} force deleted successfully");
-                    }
-                    else
-                    {
-                        TempData["ErrorMessage"] = "Force delete operation failed!";
-                        _logger.LogWarning($"Force delete failed for vehicle ID: {id}");
-                    }
-                }
-                else
-                {
-                    _logger.LogInformation($"Attempting to delete vehicle ID: {id}");
-
-                   
-                    result = await _vehicleService.DeleteVehicleAsync(id);
-
-                    if (result)
-                    {
-                        TempData["SuccessMessage"] = "Vehicle deleted successfully!";
-                        _logger.LogInformation($"Vehicle {id} deleted successfully");
-                    }
-                    else
-                    {
-                        var vehicle = await _vehicleService.GetVehicleByIdAsync(id);
-                        if (vehicle == null)
-                        {
-                            TempData["ErrorMessage"] = "Vehicle not found!";
-                            _logger.LogWarning($"Vehicle {id} not found for deletion");
-                        }
-                        else if (!vehicle.IsAvailable)
-                        {
-                            bool hasActiveRentals = await _vehicleService.HasActiveRentalsAsync(id);
-                            if (hasActiveRentals)
-                            {
-                                TempData["WarningMessage"] = "Vehicle has active rentals. It has been marked as unavailable.";
-                                _logger.LogInformation($"Vehicle {id} marked as unavailable (has active rentals)");
-                            }
-                            else
-                            {
-                                TempData["WarningMessage"] = "Vehicle could not be deleted. It has been marked as unavailable.";
-                                _logger.LogWarning($"Vehicle {id} could not be deleted, marked as unavailable");
-                            }
-                        }
-                        else
-                        {
-                            TempData["ErrorMessage"] = "Vehicle could not be deleted.";
-                            _logger.LogError($"Vehicle {id} could not be deleted for unknown reason");
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error deleting vehicle ID: {id}");
-                TempData["ErrorMessage"] = $"An error occurred while deleting the vehicle: {ex.Message}";
-            }
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        public async Task<IActionResult> ToggleAvailability(int id)
-        {
-            try
-            {
-                var vehicle = await _vehicleService.GetVehicleByIdAsync(id);
-                if (vehicle == null)
-                {
-                    TempData["ErrorMessage"] = "Vehicle not found!";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                if (!vehicle.IsAvailable)
-                {
-                    bool hasActiveRentals = await _vehicleService.HasActiveRentalsAsync(id);
-                    if (hasActiveRentals)
-                    {
-                        TempData["ErrorMessage"] = "Cannot mark vehicle as available because it has active rentals.";
-                        return RedirectToAction(nameof(Index));
-                    }
-                }
-
-               
-                vehicle.IsAvailable = !vehicle.IsAvailable;
-                await _vehicleService.UpdateVehicleAsync(vehicle);
-
-                string message = vehicle.IsAvailable
-                    ? "Vehicle marked as available!"
-                    : "Vehicle marked as unavailable!";
-
-                TempData["SuccessMessage"] = message;
-                _logger.LogInformation($"Vehicle {id} availability toggled to: {vehicle.IsAvailable}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error toggling vehicle availability");
-                TempData["ErrorMessage"] = "Error updating vehicle availability: " + ex.Message;
-            }
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        public async Task<IActionResult> ForceDelete(int id)
-        {
-       
-            if (!User.IsInRole("Admin"))
-            {
-                TempData["ErrorMessage"] = "Only administrators can perform force delete operations.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            var vehicle = await _vehicleService.GetVehicleByIdAsync(id);
-            if (vehicle == null)
-            {
-                TempData["ErrorMessage"] = "Vehicle not found!";
-                return RedirectToAction(nameof(Index));
-            }
-
-            ViewBag.ForceDelete = true;
-            ViewBag.WarningMessage = "⚠️ WARNING: Force delete will remove ALL associated records (rentals, stock, etc.). This action cannot be undone!";
-
-            return View("Delete", vehicle);
-        }
-
-        private async Task LoadBranchesViewBag()
-        {
-            var branches = await _vehicleService.GetAllBranchesAsync();
-            ViewBag.Branches = new SelectList(branches, "Id", "Name");
-        }
-
-        private async Task<string> SaveImage(IFormFile imageFile)
+        private async Task<string> SaveImageWithWatermark(IFormFile imageFile)
         {
             var uploadsFolder = Path.Combine(_environment.WebRootPath, "images", "vehicles");
-            if (!Directory.Exists(uploadsFolder))
-            {
-                Directory.CreateDirectory(uploadsFolder);
-            }
+            if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
 
-            var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(imageFile.FileName);
+            var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(imageFile.FileName);
             var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
-            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            try
             {
-                await imageFile.CopyToAsync(fileStream);
+                using (var stream = imageFile.OpenReadStream())
+                using (var img = System.Drawing.Image.FromStream(stream))
+                using (var g = System.Drawing.Graphics.FromImage(img))
+                {
+                    string watermarkPath = Path.Combine(_environment.WebRootPath, "images", "watermark.png");
+                    if (System.IO.File.Exists(watermarkPath))
+                    {
+                        using (var watermark = System.Drawing.Image.FromFile(watermarkPath))
+                        {
+                            g.SmoothingMode = SmoothingMode.AntiAlias;
+                            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+
+                            int watermarkWidth = img.Width / 4;
+                            int watermarkHeight = (watermarkWidth * watermark.Height) / watermark.Width;
+
+                            int xPosition = img.Width - watermarkWidth - 20; 
+                            int yPosition = img.Height - watermarkHeight - 20;
+                            g.DrawImage(watermark, new Rectangle(xPosition, yPosition, watermarkWidth, watermarkHeight));
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("No watermark.png in wwwroot/images!");
+                    }
+                    img.Save(filePath, ImageFormat.Jpeg);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Watermark failed, saving original: " + ex.Message);
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    await imageFile.CopyToAsync(fileStream);
+                }
             }
 
             return $"/images/vehicles/{uniqueFileName}";
@@ -401,6 +229,125 @@ namespace CarRentPro.Controllers
             }
         }
 
+        public async Task<IActionResult> Delete(int? id)
+        {
+            if (id == null) return NotFound();
+
+            var vehicle = await _vehicleService.GetVehicleByIdAsync(id.Value);
+            if (vehicle == null) return NotFound();
+
+            bool hasActiveRentals = await _vehicleService.HasActiveRentalsAsync(vehicle.Id);
+            bool hasAnyRentals = await _vehicleService.HasAnyRentalsAsync(vehicle.Id);
+
+            ViewBag.HasActiveRentals = hasActiveRentals;
+            ViewBag.HasAnyRentals = hasAnyRentals;
+            ViewBag.ForceDelete = false;
+
+            if (hasActiveRentals)
+            {
+                ViewBag.WarningMessage = "This vehicle has active or future rentals.";
+            }
+            else if (hasAnyRentals)
+            {
+                ViewBag.WarningMessage = "This vehicle has past rental history.";
+            }
+
+            return View(vehicle);
+        }
+
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(int id, bool forceDelete = false)
+        {
+            try
+            {
+                bool result;
+                if (forceDelete)
+                {
+                    _logger.LogWarning($"Force deleting vehicle ID: {id}");
+                    result = await _vehicleRepository.ForceDeleteVehicleAsync(id);
+                    if (result)
+                    {
+                        TempData["SuccessMessage"] = "Vehicle and all associated records deleted successfully!";
+                    }
+                }
+                else
+                {
+                    _logger.LogInformation($"Attempting to delete vehicle ID: {id}");
+                    result = await _vehicleService.DeleteVehicleAsync(id);
+                    if (result)
+                    {
+                        TempData["SuccessMessage"] = "Vehicle deleted successfully!";
+                    }
+                    else
+                    {
+                        var vehicle = await _vehicleService.GetVehicleByIdAsync(id);
+                        if (vehicle != null && !vehicle.IsAvailable)
+                        {
+                            TempData["WarningMessage"] = "Vehicle could not be deleted. It has been marked as unavailable.";
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error deleting vehicle ID: {id}");
+                TempData["ErrorMessage"] = $"An error occurred: {ex.Message}";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        public async Task<IActionResult> ToggleAvailability(int id)
+        {
+            try
+            {
+                var vehicle = await _vehicleService.GetVehicleByIdAsync(id);
+                if (vehicle == null) return NotFound();
+
+                if (!vehicle.IsAvailable)
+                {
+                    bool hasActiveRentals = await _vehicleService.HasActiveRentalsAsync(id);
+                    if (hasActiveRentals)
+                    {
+                        TempData["ErrorMessage"] = "Cannot mark as available because it has active rentals.";
+                        return RedirectToAction(nameof(Index));
+                    }
+                }
+
+                vehicle.IsAvailable = !vehicle.IsAvailable;
+                await _vehicleService.UpdateVehicleAsync(vehicle);
+                TempData["SuccessMessage"] = vehicle.IsAvailable ? "Vehicle available!" : "Vehicle unavailable!";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling availability");
+            }
+            return RedirectToAction(nameof(Index));
+        }
+
+        public async Task<IActionResult> ForceDelete(int id)
+        {
+            if (!User.IsInRole("Admin"))
+            {
+                TempData["ErrorMessage"] = "Only administrators can perform force delete.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var vehicle = await _vehicleService.GetVehicleByIdAsync(id);
+            if (vehicle == null) return NotFound();
+
+            ViewBag.ForceDelete = true;
+            ViewBag.WarningMessage = "⚠️ WARNING: This will remove ALL associated records. Action cannot be undone!";
+            return View("Delete", vehicle);
+        }
+
+        private async Task LoadBranchesViewBag()
+        {
+            var branches = await _vehicleService.GetAllBranchesAsync();
+            ViewBag.Branches = new SelectList(branches, "Id", "Name");
+        }
+
         [AllowAnonymous]
         public async Task<IActionResult> Available()
         {
@@ -412,28 +359,24 @@ namespace CarRentPro.Controllers
         public async Task<IActionResult> Search(string searchTerm, int? branchId)
         {
             var allVehicles = await _vehicleService.GetAllVehiclesAsync();
-            var filteredVehicles = allVehicles.AsQueryable();
+            var filtered = allVehicles.AsQueryable();
 
             if (!string.IsNullOrEmpty(searchTerm))
             {
                 searchTerm = searchTerm.ToLower();
-                filteredVehicles = filteredVehicles.Where(v =>
-                    (v.Brand != null && v.Brand.ToLower().Contains(searchTerm)) ||
+                filtered = filtered.Where(v => 
+                    (v.Brand != null && v.Brand.ToLower().Contains(searchTerm)) || 
                     (v.Model != null && v.Model.ToLower().Contains(searchTerm)) ||
-                    (v.Color != null && v.Color.ToLower().Contains(searchTerm)) ||
-                    (v.Description != null && v.Description.ToLower().Contains(searchTerm)));
+                    (v.Color != null && v.Color.ToLower().Contains(searchTerm)));
             }
 
             if (branchId.HasValue && branchId > 0)
-            {
-                filteredVehicles = filteredVehicles.Where(v => v.BranchId == branchId.Value);
-            }
+                filtered = filtered.Where(v => v.BranchId == branchId.Value);
 
             ViewBag.SearchTerm = searchTerm;
             ViewBag.BranchId = branchId;
             await LoadBranchesViewBag();
-
-            return View(filteredVehicles.ToList());
+            return View(filtered.ToList());
         }
     }
 }
