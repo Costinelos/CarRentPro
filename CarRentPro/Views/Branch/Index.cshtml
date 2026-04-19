@@ -8,9 +8,14 @@
     <div class="row mb-4">
         <div class="col-12">
             <h1>Branches</h1>
-            <a class="btn btn-primary" asp-action="Create">
-                <i class="fas fa-plus"></i> Add New Branch
-            </a>
+            <div class="d-flex gap-2">
+                <a class="btn btn-primary" asp-action="Create">
+                    <i class="fas fa-plus"></i> Add New Branch
+                </a>
+                <a class="btn btn-danger" asp-controller="Blacklist" asp-action="Index">
+                    <i class="fas fa-ban"></i> Manage Blacklist
+                </a>
+            </div>
         </div>
     </div>
 

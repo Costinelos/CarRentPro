@@ -1,0 +1,85 @@
+﻿@model IEnumerable<CarRentPro.Models.Rental>
+
+@{
+    ViewData["Title"] = "All Rentals";
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h1>All Rentals</h1>
+
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+            }
+
+            @if (!Model.Any())
+            {
+                <div class="alert alert-info">
+                    <h4>No rentals found</h4>
+                    <p>There are no rental records in the system.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Vehicle</th>
+                                <th>Customer</th>
+                                <th>Rental Period</th>
+                                <th>Total Price</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var rental in Model)
+                            {
+                                <tr>
+                                    <td>@rental.Vehicle.Brand @rental.Vehicle.Model</td>
+                                    <td>@rental.User.Email</td>
+                                    <td>
+                                        @rental.RentalDate.ToString("MMM dd, yyyy")<br>
+                                        to @rental.ReturnDate.ToString("MMM dd, yyyy")
+                                    </td>
+                                    <td>$@rental.TotalPrice</td>
+                                    <td>
+                                        <span class="badge @GetStatusBadgeClass(rental.Status)">@rental.Status</span>
+                                    </td>
+                                    <td>
+                                        @if (rental.Status == "Active")
+                                        {
+                                            <form asp-action="CompleteRental" method="post" class="d-inline">
+                                                <input type="hidden" name="id" value="@rental.Id" />
+                                                <button type="submit" class="btn btn-success btn-sm"
+                                                        onclick="return confirm('Mark this rental as completed?')">
+                                                    Complete
+                                                </button>
+                                            </form>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@functions {
+    public string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Active" => "bg-success",
+            "Completed" => "bg-secondary",
+            "Cancelled" => "bg-danger",
+            _ => "bg-info"
+        };
+    }
+}

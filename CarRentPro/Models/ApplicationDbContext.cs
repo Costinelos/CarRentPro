@@ -15,12 +15,14 @@ namespace CarRentPro.Models
         public DbSet<Vehicle> Vehicles { get; set; }
         public DbSet<Rental> Rentals { get; set; }
         public DbSet<VehicleStock> VehicleStocks { get; set; }
+        public DbSet<BlacklistEntry> BlacklistEntries { get; set; }
+        public DbSet<PredefinedProfilePicture> PredefinedProfilePictures { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
-            // Configurare pentru proprietățile decimal
+            // Configurări precizie zecimală
             builder.Entity<Rental>()
                 .Property(r => r.TotalPrice)
                 .HasPrecision(18, 2);
@@ -29,7 +31,7 @@ namespace CarRentPro.Models
                 .Property(v => v.PricePerDay)
                 .HasPrecision(18, 2);
 
-            // Configurări pentru relații și constrângeri
+            // Relații Rental - User/Vehicle
             builder.Entity<Rental>()
                 .HasOne(r => r.User)
                 .WithMany(u => u.Rentals)
@@ -42,12 +44,14 @@ namespace CarRentPro.Models
                 .HasForeignKey(r => r.VehicleId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Relații Vehicle - Branch
             builder.Entity<Vehicle>()
                 .HasOne(v => v.Branch)
                 .WithMany(b => b.Vehicles)
                 .HasForeignKey(v => v.BranchId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Relații Stock
             builder.Entity<VehicleStock>()
                 .HasOne(vs => vs.Branch)
                 .WithMany(b => b.VehicleStocks)
@@ -59,6 +63,24 @@ namespace CarRentPro.Models
                 .WithMany(v => v.VehicleStocks)
                 .HasForeignKey(vs => vs.VehicleId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Relații Blacklist
+            builder.Entity<BlacklistEntry>()
+                .HasOne(b => b.User)
+                .WithMany(u => u.BlacklistEntries)
+                .HasForeignKey(b => b.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<BlacklistEntry>()
+                .HasIndex(b => new { b.UserId, b.IsActive, b.ExpirationDate })
+                .HasDatabaseName("IX_Blacklist_ActiveCheck");
+
+            // Profiluri Predefinite
+            builder.Entity<PredefinedProfilePicture>()
+                .Property(p => p.ImageName).IsRequired().HasMaxLength(100);
+
+            builder.Entity<PredefinedProfilePicture>()
+                .Property(p => p.ImagePath).IsRequired().HasMaxLength(200);
         }
     }
 }

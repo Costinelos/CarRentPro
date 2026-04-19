@@ -1,9 +1,9 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI;
 using CarRentPro.Models;
 using CarRentPro.Repositories;
 using CarRentPro.Services;
+using CarRentPro.Interfaces;
 
 namespace CarRentPro
 {
@@ -24,13 +24,17 @@ namespace CarRentPro
             builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
             builder.Services.AddScoped<IRentalRepository, RentalRepository>();
             builder.Services.AddScoped<IBranchRepository, BranchRepository>();
+            builder.Services.AddScoped<IBlacklistRepository, BlacklistRepository>();
 
             // Service pattern
             builder.Services.AddScoped<IVehicleService, VehicleService>();
             builder.Services.AddScoped<IRentalService, RentalService>();
             builder.Services.AddScoped<IBranchService, BranchService>();
+            builder.Services.AddScoped<IBlacklistService, BlacklistService>();
 
-            // Add Identity services
+            // --- NOU: Inregistrare Serviciu AI Groq ---
+            builder.Services.AddScoped<IGroqService, GroqService>();
+
             builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
             {
                 options.SignIn.RequireConfirmedAccount = false;
@@ -40,6 +44,7 @@ namespace CarRentPro
                 options.Password.RequireUppercase = false;
                 options.Password.RequiredLength = 6;
             })
+            .AddRoles<IdentityRole>()
             .AddEntityFrameworkStores<ApplicationDbContext>();
 
             var app = builder.Build();
@@ -48,13 +53,7 @@ namespace CarRentPro
             if (!app.Environment.IsDevelopment())
             {
                 app.UseExceptionHandler("/Home/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
-            }
-            else
-            {
-               
-                app.UseDeveloperExceptionPage();
             }
 
             app.UseHttpsRedirection();
@@ -64,11 +63,9 @@ namespace CarRentPro
             app.UseAuthentication();
             app.UseAuthorization();
 
-            app.MapStaticAssets();
             app.MapControllerRoute(
                 name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}")
-                .WithStaticAssets();
+                pattern: "{controller=Home}/{action=Index}/{id?}");
 
             app.MapRazorPages();
 

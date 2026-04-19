@@ -30,13 +30,15 @@ namespace CarRentPro.Models
         [StringLength(1000)]
         public string? Description { get; set; }
 
-        
         [StringLength(255)]
         public string? ImageUrl { get; set; } = "/images/vehicles/default-car.jpg";
 
+        [StringLength(500)]
+        public string? VideoUrl { get; set; }
+        // -----------------------------------
+
         public bool IsAvailable { get; set; } = true;
 
-        
         [Required(ErrorMessage = "Branch is required")]
         public int BranchId { get; set; }
         public virtual Branch? Branch { get; set; }

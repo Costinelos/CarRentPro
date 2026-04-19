@@ -98,6 +98,44 @@ namespace CarRentPro.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("CarRentPro.Models.BlacklistEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByAdminId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ExpirationDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "IsActive", "ExpirationDate")
+                        .HasDatabaseName("IX_Blacklist_ActiveCheck");
+
+                    b.ToTable("BlacklistEntries");
+                });
+
             modelBuilder.Entity("CarRentPro.Models.Branch", b =>
                 {
                     b.Property<int>("Id")
@@ -124,6 +162,40 @@ namespace CarRentPro.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Branches");
+                });
+
+            modelBuilder.Entity("CarRentPro.Models.PredefinedProfilePicture", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ImageName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ImagePath")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PredefinedProfilePictures");
                 });
 
             modelBuilder.Entity("CarRentPro.Models.Rental", b =>
@@ -153,7 +225,7 @@ namespace CarRentPro.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<int>("VehicleId")
+                    b.Property<int?>("VehicleId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -206,6 +278,10 @@ namespace CarRentPro.Migrations
                     b.Property<decimal>("PricePerDay")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("VideoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("Year")
                         .HasColumnType("int");
@@ -383,6 +459,17 @@ namespace CarRentPro.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("CarRentPro.Models.BlacklistEntry", b =>
+                {
+                    b.HasOne("CarRentPro.Models.ApplicationUser", "User")
+                        .WithMany("BlacklistEntries")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("CarRentPro.Models.Rental", b =>
                 {
                     b.HasOne("CarRentPro.Models.ApplicationUser", "User")
@@ -394,8 +481,7 @@ namespace CarRentPro.Migrations
                     b.HasOne("CarRentPro.Models.Vehicle", "Vehicle")
                         .WithMany("Rentals")
                         .HasForeignKey("VehicleId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("User");
 
@@ -485,6 +571,8 @@ namespace CarRentPro.Migrations
 
             modelBuilder.Entity("CarRentPro.Models.ApplicationUser", b =>
                 {
+                    b.Navigation("BlacklistEntries");
+
                     b.Navigation("Rentals");
                 });
 

@@ -4,64 +4,308 @@
     ViewData["Title"] = "Register";
 }
 
-<h1>@ViewData["Title"]</h1>
+<style>
+    .register-container {
+        min-height: calc(100vh - 200px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        position: relative;
+        overflow: hidden;
+    }
 
-<div class="row">
-    <div class="col-md-4">
-        <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
-            <h2>Create a new account.</h2>
-            <hr />
-            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-            <div class="form-floating mb-3">
-                <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                <label asp-for="Input.Email">Email</label>
-                <span asp-validation-for="Input.Email" class="text-danger"></span>
-            </div>
-            <div class="form-floating mb-3">
-                <input asp-for="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label asp-for="Input.Password">Password</label>
-                <span asp-validation-for="Input.Password" class="text-danger"></span>
-            </div>
-            <div class="form-floating mb-3">
-                <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label asp-for="Input.ConfirmPassword">Confirm Password</label>
-                <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
-            </div>
-            <button id="registerSubmit" type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
-        </form>
-    </div>
-    <div class="col-md-6 col-md-offset-2">
-        <section>
-            <h3>Use another service to register.</h3>
-            <hr />
-            @{
-                if ((Model.ExternalLogins?.Count ?? 0) == 0)
-                {
-                    <div>
-                        <p>
-                            There are no external authentication services configured. See this <a href="https://go.microsoft.com/fwlink/?LinkID=532715">article
-                            about setting up this ASP.NET application to support logging in via external services</a>.
-                        </p>
-                    </div>
-                }
-                else
-                {
-                    <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-horizontal">
-                        <div>
-                            <p>
-                                @foreach (var provider in Model.ExternalLogins!)
-                                {
-                                    <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
-                                }
-                            </p>
-                        </div>
-                    </form>
-                }
+        .register-container:before {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            top: -100px;
+            right: -100px;
+        }
+
+        .register-container:after {
+            content: '';
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.05);
+            bottom: -50px;
+            left: -50px;
+        }
+
+    .register-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+        overflow: hidden;
+        width: 100%;
+        max-width: 500px;
+        z-index: 1;
+    }
+
+    .register-header {
+        background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+        color: white;
+        padding: 40px;
+        text-align: center;
+    }
+
+    .register-logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+
+        .register-logo i {
+            font-size: 48px;
+            margin-right: 15px;
+        }
+
+        .register-logo h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+    .register-body {
+        padding: 40px;
+    }
+
+    .form-floating > .form-control {
+        height: 56px;
+        padding: 1rem 0.75rem;
+        border-radius: 12px;
+        border: 2px solid #e1e5e9;
+        transition: all 0.3s ease;
+        background: #f8f9fa;
+    }
+
+        .form-floating > .form-control:focus {
+            border-color: #6a11cb;
+            box-shadow: 0 0 0 3px rgba(106, 17, 203, 0.1);
+            background: white;
+        }
+
+    .form-floating > label {
+        padding: 1rem 0.75rem;
+        color: #6c757d;
+    }
+
+    .btn-register {
+        height: 56px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+        border: none;
+        transition: all 0.3s ease;
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }
+
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(106, 17, 203, 0.3);
+        }
+
+    .password-hint {
+        font-size: 12px;
+        color: #6c757d;
+        margin-top: 5px;
+        display: block;
+    }
+
+    .login-link {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 15px;
+        color: #6c757d;
+        padding-top: 20px;
+        border-top: 1px solid #e1e5e9;
+    }
+
+        .login-link a {
+            color: #6a11cb;
+            font-weight: 600;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+            .login-link a:hover {
+                color: #2575fc;
+                text-decoration: underline;
             }
-        </section>
+
+    .floating-label-group {
+        position: relative;
+        margin-bottom: 25px;
+    }
+
+        .floating-label-group input {
+            width: 100%;
+            height: 56px;
+            padding: 20px 15px 5px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            background: #f8f9fa;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+            .floating-label-group input:focus {
+                border-color: #6a11cb;
+                box-shadow: 0 0 0 3px rgba(106, 17, 203, 0.1);
+                outline: none;
+                background: white;
+            }
+
+                .floating-label-group input:focus + label,
+                .floating-label-group input:not(:placeholder-shown) + label {
+                    transform: translateY(-10px) scale(0.85);
+                    color: #6a11cb;
+                }
+
+        .floating-label-group label {
+            position: absolute;
+            top: 18px;
+            left: 15px;
+            font-size: 16px;
+            color: #6c757d;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            background: transparent;
+            padding: 0 5px;
+        }
+
+    .validation-summary ul {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 20px 0;
+    }
+
+    .validation-summary li {
+        color: #dc3545;
+        font-size: 14px;
+        margin-bottom: 5px;
+        padding: 8px 12px;
+        background: rgba(220, 53, 69, 0.1);
+        border-radius: 6px;
+        border-left: 3px solid #dc3545;
+    }
+
+    .register-title {
+        text-align: center;
+        color: #333;
+        font-weight: 600;
+        margin-bottom: 30px;
+        font-size: 24px;
+    }
+
+    .form-container {
+        max-width: 400px;
+        margin: 0 auto;
+    }
+</style>
+
+<div class="register-container">
+    <div class="register-card">
+
+        <div class="register-header">
+            <div class="register-logo">
+                <i class="fas fa-car"></i>
+                <h1>CarRentPro</h1>
+            </div>
+            <h2>Create Your Account</h2>
+            <p class="mb-0">Join our car rental community</p>
+        </div>
+
+
+        <div class="register-body">
+            <h3 class="register-title">Register</h3>
+
+            <div class="form-container">
+                <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
+                    <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
+
+                    <div class="floating-label-group">
+                        <input asp-for="Input.Email"
+                               class="form-control"
+                               autocomplete="username"
+                               aria-required="true"
+                               placeholder=" " />
+                        <label asp-for="Input.Email">Email Address</label>
+                        <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="floating-label-group">
+                        <input asp-for="Input.Password"
+                               class="form-control"
+                               autocomplete="new-password"
+                               aria-required="true"
+                               placeholder=" "
+                               type="password" />
+                        <label asp-for="Input.Password">Password</label>
+                        <span asp-validation-for="Input.Password" class="text-danger small"></span>
+                        <span class="password-hint">At least 6 characters</span>
+                    </div>
+
+                    <div class="floating-label-group">
+                        <input asp-for="Input.ConfirmPassword"
+                               class="form-control"
+                               autocomplete="new-password"
+                               aria-required="true"
+                               placeholder=" "
+                               type="password" />
+                        <label asp-for="Input.ConfirmPassword">Confirm Password</label>
+                        <span asp-validation-for="Input.ConfirmPassword" class="text-danger small"></span>
+                    </div>
+
+                    <button id="registerSubmit" type="submit" class="btn btn-register w-100">
+                        <i class="fas fa-user-plus me-2"></i>Create Account
+                    </button>
+                </form>
+
+
+                <div class="login-link">
+                    Already have an account?
+                    <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">
+                        Sign in here
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+
+        document.querySelectorAll('.floating-label-group input').forEach(input => {
+
+            if (input.value) {
+                input.previousElementSibling.style.transform = 'translateY(-10px) scale(0.85)';
+                input.previousElementSibling.style.color = '#6a11cb';
+            }
+
+            input.addEventListener('focus', function() {
+                this.previousElementSibling.style.transform = 'translateY(-10px) scale(0.85)';
+                this.previousElementSibling.style.color = '#6a11cb';
+            });
+
+            input.addEventListener('blur', function() {
+                if (!this.value) {
+                    this.previousElementSibling.style.transform = 'none';
+                    this.previousElementSibling.style.color = '#6c757d';
+                }
+            });
+        });
+    </script>
 }

@@ -1,0 +1,75 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Profil";
+    ViewData["ActivePage"] = ManageNavPages.Index;
+}
+
+<h3>@ViewData["Title"]</h3>
+<partial name="_StatusMessage" for="StatusMessage" />
+
+<div class="row">
+    <div class="col-md-6">
+        <form id="profile-form" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-floating mb-3">
+                <input asp-for="Username" class="form-control" disabled />
+                <label asp-for="Username" class="form-label"></label>
+            </div>
+            <div class="form-floating mb-3">
+                <input asp-for="Input.PhoneNumber" class="form-control" />
+                <label asp-for="Input.PhoneNumber" class="form-label"></label>
+                <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
+            </div>
+            <div class="form-floating mb-3">
+                <textarea asp-for="Input.Biography" class="form-control" style="height: 100px"></textarea>
+                <label asp-for="Input.Biography"></label>
+                <span asp-validation-for="Input.Biography" class="text-danger"></span>
+                <small class="text-muted"><span id="charCount">0</span>/500</small>
+            </div>
+            <input type="hidden" asp-for="Input.ProfilePicture" id="selectedPicture" />
+            <button id="update-profile-button" type="submit" class="w-100 btn btn-lg btn-primary">Salvează</button>
+        </form>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Poza de profil</h5>
+                <img id="currentProfilePicture"
+                     src="/images/profile-pictures/@(Model.Input.ProfilePicture ?? "default.png")"
+                     class="rounded-circle mb-3" style="width:150px;height:150px;object-fit:cover">
+
+                <div class="row g-2">
+                    @foreach (var pic in Model.AvailableProfilePictures)
+                    {
+                        <div class="col-3">
+                            <img src="/images/profile-pictures/@pic"
+                                 class="img-thumbnail @(pic == Model.Input.ProfilePicture ? "border-primary" : "")"
+                                 style="width:60px;height:60px;cursor:pointer"
+                                 onclick="selectPicture('@pic')">
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById('Input_Biography').addEventListener('input', function() {
+            document.getElementById('charCount').textContent = this.value.length;
+        });
+        document.getElementById('charCount').textContent = document.getElementById('Input_Biography').value.length;
+
+        function selectPicture(pic) {
+            document.getElementById('currentProfilePicture').src = '/images/profile-pictures/' + pic;
+            document.getElementById('selectedPicture').value = pic;
+            document.querySelectorAll('.img-thumbnail').forEach(img => {
+                img.classList.toggle('border-primary', img.src.includes(pic));
+            });
+        }
+    </script>
+}

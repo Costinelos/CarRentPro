@@ -49,6 +49,7 @@
                     <textarea asp-for="Description" class="form-control" rows="3"></textarea>
                     <span asp-validation-for="Description" class="text-danger"></span>
                 </div>
+
                 <div class="mb-3">
                     <label for="imageFile" class="form-label">Vehicle Image</label>
                     <input type="file" class="form-control" id="imageFile" name="imageFile" accept="image/*" />
@@ -63,6 +64,12 @@
                             <span>No image</span>
                         }
                     </small>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="VideoUrl" class="form-label">Video URL</label>
+                    <input asp-for="VideoUrl" class="form-control" placeholder="https://..." />
+                    <span asp-validation-for="VideoUrl" class="text-danger"></span>
                 </div>
 
                 <div class="mb-3">

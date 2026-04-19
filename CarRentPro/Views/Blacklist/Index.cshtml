@@ -1,0 +1,71 @@
+﻿@model List<BlacklistEntry>
+
+<h2>Blacklisted Customers</h2>
+
+<div class="mb-3">
+    <a asp-action="Add" class="btn btn-danger">
+        <i class="fas fa-user-slash"></i> Add New to Blacklist
+    </a>
+</div>
+
+
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> No customers are currently blacklisted.
+    </div>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Customer Email</th> 
+                <th>Reason</th>
+                <th>Added On</th>
+                <th>Expires</th>
+                <th>Added By</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var entry in Model)
+            {
+                <tr>
+                    
+                    <td>@entry.User?.Email</td>
+                    <td title="@entry.Reason">
+                        @(entry.Reason.Length > 30 ? entry.Reason.Substring(0, 30) + "..." : entry.Reason)
+                    </td>
+                    <td>@entry.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                    <td>
+                        @if (entry.ExpirationDate.HasValue)
+                        {
+                            @entry.ExpirationDate.Value.ToLocalTime().ToString("dd/MM/yyyy")
+                        }
+                        else
+                        {
+                            <span class="badge bg-dark">Permanent</span>
+                        }
+                    </td>
+                    <td>@entry.CreatedByAdminId</td>
+                    <td>
+                        <a asp-action="Details" asp-route-id="@entry.Id"
+                           class="btn btn-info btn-sm" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <form asp-action="Remove" method="post" style="display:inline;">
+                            <input type="hidden" name="id" value="@entry.Id" />
+                            <button type="submit" class="btn btn-warning btn-sm"
+                                    onclick="return confirm('Remove @entry.User?.Email from blacklist?')"
+                                    title="Remove from Blacklist">
+                                <i class="fas fa-user-check"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

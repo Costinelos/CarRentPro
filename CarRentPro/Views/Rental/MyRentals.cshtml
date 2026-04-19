@@ -33,11 +33,12 @@
                     @foreach (var rental in Model)
                     {
                         <div class="col-md-6 mb-4">
-                            <div class="card">
+                            <div class="card h-100">
                                 <div class="card-body">
                                     <h5 class="card-title">@rental.Vehicle.Brand @rental.Vehicle.Model</h5>
                                     <p class="card-text">
-                                        <strong>Rental Period:</strong> @rental.RentalDate.ToString("MMM dd, yyyy") - @rental.ReturnDate.ToString("MMM dd, yyyy")<br>
+                                        <strong>Rental Period:</strong>
+                                        @rental.RentalDate.ToString("MMM dd, yyyy") - @rental.ReturnDate.ToString("MMM dd, yyyy")<br>
                                         <strong>Total Price:</strong> $@rental.TotalPrice<br>
                                         <strong>Status:</strong>
                                         <span class="badge @GetStatusBadgeClass(rental.Status)">@rental.Status</span><br>
@@ -46,13 +47,17 @@
 
                                     @if (rental.Status == "Active" && rental.ReturnDate >= DateTime.Now)
                                     {
-                                        <form asp-action="Cancel" asp-route-id="@rental.Id" method="post" class="d-inline">
+                                        <form asp-action="Cancel" method="post" class="mt-3">
+                                            <input type="hidden" name="id" value="@rental.Id" />
                                             <button type="submit" class="btn btn-warning btn-sm"
                                                     onclick="return confirm('Are you sure you want to cancel this rental?')">
-                                                Cancel Rental
+                                                <i class="fas fa-times"></i> Cancel Rental
                                             </button>
                                         </form>
                                     }
+                                </div>
+                                <div class="card-footer text-muted">
+                                    <small>Rented on: @rental.RentalDate.ToString("MMM dd, yyyy 'at' hh:mm tt")</small>
                                 </div>
                             </div>
                         </div>
@@ -71,7 +76,6 @@
             "Active" => "bg-success",
             "Completed" => "bg-secondary",
             "Cancelled" => "bg-danger",
-            "Pending" => "bg-warning",
             _ => "bg-info"
         };
     }

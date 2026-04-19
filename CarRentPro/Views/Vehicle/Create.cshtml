@@ -50,11 +50,17 @@
                     <span asp-validation-for="Description" class="text-danger"></span>
                 </div>
 
-                <!-- INPUT PENTRU IMAGINE -->
                 <div class="mb-3">
                     <label for="imageFile" class="form-label">Vehicle Image</label>
                     <input type="file" class="form-control" id="imageFile" name="imageFile" accept="image/*" />
                     <small class="form-text text-muted">Upload a photo of the vehicle (optional)</small>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="VideoUrl" class="form-label">Video URL (Optional)</label>
+                    <input asp-for="VideoUrl" class="form-control" placeholder="https://example.com/video.mp4 or YouTube link" />
+                    <small class="form-text text-muted">Paste a link to an MP4 file or a YouTube video.</small>
+                    <span asp-validation-for="VideoUrl" class="text-danger"></span>
                 </div>
 
                 <div class="mb-3">

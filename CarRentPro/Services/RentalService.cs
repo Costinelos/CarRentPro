@@ -14,54 +14,9 @@ namespace CarRentPro.Services
             _context = context;
         }
 
-        public async Task<(bool Success, string Message)> CreateRentalAsync(string userId, int vehicleId, DateTime startDate, DateTime endDate)
+        public async Task<Rental> GetRentalByIdAsync(int id)
         {
-            
-            if (await _rentalRepository.HasUserActiveRental(userId))
-            {
-                return (false, "You already have an active rental. Please return your current vehicle before renting another one.");
-            }
-
-            
-            if (!await _rentalRepository.IsVehicleAvailableForDates(vehicleId, startDate, endDate))
-            {
-                return (false, "This vehicle is not available for the selected dates. Please choose different dates or another vehicle.");
-            }
-
-            
-            var vehicle = await _context.Vehicles.FindAsync(vehicleId);
-            if (vehicle == null)
-            {
-                return (false, "Vehicle not found.");
-            }
-
-            if (!vehicle.IsAvailable)
-            {
-                return (false, "This vehicle is currently not available for rental.");
-            }
-
-            var days = (endDate - startDate).Days;
-            var totalPrice = days * vehicle.PricePerDay;
-
-            
-            var rental = new Rental
-            {
-                UserId = userId,
-                VehicleId = vehicleId,
-                RentalDate = startDate,
-                ReturnDate = endDate,
-                TotalPrice = totalPrice,
-                Status = "Active"
-            };
-
-           
-            vehicle.IsAvailable = false;
-
-            
-            await _rentalRepository.CreateRentalAsync(rental);
-            await _context.SaveChangesAsync();
-
-            return (true, "Rental created successfully!");
+            return await _rentalRepository.GetRentalByIdAsync(id);
         }
 
         public async Task<List<Rental>> GetUserRentalsAsync(string userId)
@@ -69,13 +24,85 @@ namespace CarRentPro.Services
             return await _rentalRepository.GetUserRentalsAsync(userId);
         }
 
-        public async Task<bool> CanUserRentVehicle(string userId, int vehicleId, DateTime startDate, DateTime endDate)
+        public async Task<List<Rental>> GetAllRentalsAsync()
         {
-            
-            var hasActiveRental = await _rentalRepository.HasUserActiveRental(userId);
-            var isVehicleAvailable = await _rentalRepository.IsVehicleAvailableForDates(vehicleId, startDate, endDate);
+            return await _rentalRepository.GetAllRentalsAsync();
+        }
+
+        public async Task<(bool Success, string Message, Rental Rental)> CreateRentalAsync(string userId, int vehicleId, DateTime returnDate)
+        {
+            try
+            {
+                
+                if (await _rentalRepository.HasUserActiveRentalAsync(userId))
+                {
+                    return (false, "You already have an active rental. Please return your current vehicle before renting another one.", null);
+                }
+
+                
+                if (!await _rentalRepository.IsVehicleAvailableAsync(vehicleId))
+                {
+                    return (false, "This vehicle is currently not available for rental.", null);
+                }
+
+                
+                var vehicle = await _context.Vehicles.FindAsync(vehicleId);
+                if (vehicle == null)
+                {
+                    return (false, "Vehicle not found.", null);
+                }
+
+                var rentalDate = DateTime.Now;
+                var days = (returnDate - rentalDate).Days;
+                if (days < 1) days = 1; 
+
+                var totalPrice = days * vehicle.PricePerDay;
+
+               
+                var rental = new Rental
+                {
+                    UserId = userId,
+                    VehicleId = vehicleId,
+                    RentalDate = rentalDate,
+                    ReturnDate = returnDate,
+                    TotalPrice = totalPrice,
+                    Status = "Active"
+                };
+
+                
+                vehicle.IsAvailable = false;
+
+                var createdRental = await _rentalRepository.CreateRentalAsync(rental);
+                return (true, "Vehicle rented successfully!", createdRental);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Error creating rental: {ex.Message}", null);
+            }
+        }
+
+        public async Task<bool> CancelRentalAsync(int rentalId, string userId)
+        {
+            var rental = await _rentalRepository.GetRentalByIdAsync(rentalId);
+            if (rental == null || rental.UserId != userId)
+            {
+                return false;
+            }
+
+            return await _rentalRepository.CancelRentalAsync(rentalId);
+        }
+
+        public async Task<bool> CanUserRentVehicleAsync(string userId, int vehicleId)
+        {
+            var hasActiveRental = await _rentalRepository.HasUserActiveRentalAsync(userId);
+            var isVehicleAvailable = await _rentalRepository.IsVehicleAvailableAsync(vehicleId);
 
             return !hasActiveRental && isVehicleAvailable;
+        }
+
+        public async Task<bool> IsVehicleAvailableAsync(int vehicleId)
+        {
+            return await _rentalRepository.IsVehicleAvailableAsync(vehicleId);
         }
     }
 }

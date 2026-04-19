@@ -1,0 +1,189 @@
+﻿@{
+    ViewData["Title"] = "Add Customer to Blacklist";
+
+    
+    var activeUsers = ViewBag.ActiveUsers as IEnumerable<dynamic>;
+}
+
+<h2><i class="fas fa-user-slash"></i> Add Customer to Blacklist</h2>
+
+<hr />
+
+<!-- Success/Error Messages -->
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Validation Errors -->
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        @Html.ValidationSummary(false, "", new { @class = "text-danger" })
+    </div>
+}
+
+<!-- Main Form -->
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Blacklist Customer</h4>
+            </div>
+
+            <div class="card-body">
+                <form asp-action="Add" method="post">
+                    <!-- Select User Dropdown -->
+                    <div class="mb-4">
+                        <label for="userId" class="form-label fw-bold">
+                            <i class="fas fa-user"></i> Select Customer
+                        </label>
+
+                        @if (activeUsers != null && activeUsers.Any())
+                        {
+                            <select class="form-select form-select-lg" id="userId" name="userId" required>
+                                <option value="">-- Select a customer --</option>
+                                @foreach (var user in activeUsers)
+                                {
+                                    <option value="@user.Id">@user.DisplayText</option>
+                                }
+                            </select>
+                            <div class="form-text">
+                                Choose the customer you want to add to the blacklist
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-warning">
+                                <i class="fas fa-info-circle"></i>
+                                No customers available for blacklisting. All customers may already be blacklisted.
+                            </div>
+                            <select class="form-select" id="userId" name="userId" disabled>
+                                <option value="">No customers available</option>
+                            </select>
+                        }
+
+                        @if (ViewData.ModelState["userId"]?.Errors.Any() == true)
+                        {
+                            <div class="text-danger mt-1">
+                                @ViewData.ModelState["userId"].Errors.First().ErrorMessage
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Reason -->
+                    <div class="mb-4">
+                        <label for="reason" class="form-label fw-bold">
+                            <i class="fas fa-comment-dots"></i> Reason for Blacklisting
+                        </label>
+                        <textarea class="form-control" id="reason" name="reason"
+                                  rows="4" required minlength="10" maxlength="500"
+                                  placeholder="Enter the reason for blacklisting this customer..."></textarea>
+
+                        @if (ViewData.ModelState["reason"]?.Errors.Any() == true)
+                        {
+                            <div class="text-danger mt-1">
+                                @ViewData.ModelState["reason"].Errors.First().ErrorMessage
+                            </div>
+                        }
+
+                        <div class="form-text">
+                            Required. Minimum 10 characters, maximum 500 characters.
+                            <span class="float-end">
+                                <span id="charCount">0</span>/500
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Expiration Date -->
+                    <div class="mb-4">
+                        <label for="expirationDate" class="form-label fw-bold">
+                            <i class="fas fa-calendar-alt"></i> Expiration Date (Optional)
+                        </label>
+                        <input type="date" class="form-control" id="expirationDate"
+                               name="expirationDate" />
+                        <div class="form-text">
+                            If set, the blacklist will expire automatically on this date.
+                            Leave empty for permanent blacklist.
+                        </div>
+                    </div>
+
+                  
+
+                    <!-- Buttons -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to List
+                        </a>
+                        <button type="submit" class="btn btn-danger px-4"
+                        @(activeUsers == null || !activeUsers.Any() ? "disabled" : "")>
+                            <i class="fas fa-ban"></i> Add to Blacklist
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+          
+            $('#reason').on('input', function() {
+                var length = $(this).val().length;
+                $('#charCount').text(length);
+
+                if (length < 10) {
+                    $('#charCount').addClass('text-danger');
+                    $('#charCount').removeClass('text-success');
+                } else {
+                    $('#charCount').removeClass('text-danger');
+                    $('#charCount').addClass('text-success');
+                }
+            });
+
+           
+            var tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            $('#expirationDate').attr('min', tomorrow.toISOString().split('T')[0]);
+
+          
+            $('form').on('submit', function(e) {
+                var userId = $('#userId').val();
+                var reason = $('#reason').val().trim();
+                var userEmail = $('#userId option:selected').text();
+
+                if (!userId) {
+                    e.preventDefault();
+                    alert('Please select a customer from the list.');
+                    $('#userId').focus();
+                    return false;
+                }
+
+                if (reason.length < 10) {
+                    e.preventDefault();
+                    alert('Reason must be at least 10 characters long.');
+                    $('#reason').focus();
+                    return false;
+                }
+
+                if (!confirm(`Are you sure you want to blacklist "${userEmail}"?\n\nThis action cannot be undone automatically.`)) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        });
+    </script>
+}

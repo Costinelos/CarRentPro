@@ -1,75 +1,75 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using CarRentPro.Models;
 using CarRentPro.Services;
+using CarRentPro.Repositories;
+
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 
 namespace CarRentPro.Controllers
 {
+    [Authorize(Roles = "Admin,Employee")]
     public class VehicleController : Controller
     {
         private readonly IVehicleService _vehicleService;
+        private readonly IVehicleRepository _vehicleRepository;
         private readonly ILogger<VehicleController> _logger;
         private readonly IWebHostEnvironment _environment;
 
-        public VehicleController(IVehicleService vehicleService, ILogger<VehicleController> logger, IWebHostEnvironment environment)
+        public VehicleController(
+            IVehicleService vehicleService,
+            IVehicleRepository vehicleRepository,
+            ILogger<VehicleController> logger,
+            IWebHostEnvironment environment)
         {
             _vehicleService = vehicleService;
+            _vehicleRepository = vehicleRepository;
             _logger = logger;
             _environment = environment;
         }
 
-        // GET: Vehicle/Index 
         public async Task<IActionResult> Index()
         {
             var vehicles = await _vehicleService.GetAllVehiclesAsync();
             return View(vehicles);
         }
 
-        // GET: Vehicle/Details/5
+        [AllowAnonymous]
         public async Task<IActionResult> Details(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var vehicle = await _vehicleService.GetVehicleByIdAsync(id.Value);
-            if (vehicle == null)
-            {
-                return NotFound();
-            }
+            if (vehicle == null) return NotFound();
 
             return View(vehicle);
         }
 
-        // GET: Vehicle/Create
         public async Task<IActionResult> Create()
         {
             await LoadBranchesViewBag();
             return View();
         }
 
-        // POST: Vehicle/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Vehicle vehicle, IFormFile? imageFile)
         {
             _logger.LogInformation("=== VEHICLE CREATE START ===");
-            _logger.LogInformation($"ModelState IsValid: {ModelState.IsValid}");
 
             if (ModelState.IsValid)
             {
                 try
                 {
-                    
                     if (imageFile != null && imageFile.Length > 0)
                     {
-                        vehicle.ImageUrl = await SaveImage(imageFile);
+
+                        vehicle.ImageUrl = await SaveImageWithWatermark(imageFile);
                     }
 
-                    _logger.LogInformation($"Creating vehicle: {vehicle.Brand} {vehicle.Model}, BranchId: {vehicle.BranchId}");
-
-                   
                     var branches = await _vehicleService.GetAllBranchesAsync();
                     var selectedBranch = branches.FirstOrDefault(b => b.Id == vehicle.BranchId);
 
@@ -93,53 +93,50 @@ namespace CarRentPro.Controllers
             else
             {
                 _logger.LogWarning("ModelState is invalid");
-                foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
-                {
-                    _logger.LogWarning($"Validation error: {error.ErrorMessage}");
-                }
-                TempData["ErrorMessage"] = "Please correct the validation errors.";
             }
 
             await LoadBranchesViewBag();
             return View(vehicle);
         }
 
-        // GET: Vehicle/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var vehicle = await _vehicleService.GetVehicleByIdAsync(id.Value);
-            if (vehicle == null)
-            {
-                return NotFound();
-            }
+            if (vehicle == null) return NotFound();
 
             await LoadBranchesViewBag();
             return View(vehicle);
         }
 
-        // POST: Vehicle/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Vehicle vehicle, IFormFile? imageFile)
         {
-            if (id != vehicle.Id)
-            {
-                return NotFound();
-            }
+            if (id != vehicle.Id) return NotFound();
 
             if (ModelState.IsValid)
             {
                 try
                 {
-                    
-                    if (imageFile != null && imageFile.Length > 0)
+                    var existingVehicle = await _vehicleService.GetVehicleByIdAsync(id);
+                    if (existingVehicle == null) return NotFound();
+
+                    if (imageFile == null || imageFile.Length == 0)
                     {
-                        vehicle.ImageUrl = await SaveImage(imageFile);
+                        vehicle.ImageUrl = existingVehicle.ImageUrl;
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrEmpty(existingVehicle.ImageUrl) &&
+                            existingVehicle.ImageUrl != "/images/vehicles/default-car.jpg")
+                        {
+                            DeleteOldImage(existingVehicle.ImageUrl);
+                        }
+
+
+                        vehicle.ImageUrl = await SaveImageWithWatermark(imageFile);
                     }
 
                     await _vehicleService.UpdateVehicleAsync(vehicle);
@@ -157,39 +154,144 @@ namespace CarRentPro.Controllers
             return View(vehicle);
         }
 
-        // GET: Vehicle/Delete/5
-        public async Task<IActionResult> Delete(int? id)
+        private async Task<string> SaveImageWithWatermark(IFormFile imageFile)
         {
-            if (id == null)
+            var uploadsFolder = Path.Combine(_environment.WebRootPath, "images", "vehicles");
+            if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
+
+            var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(imageFile.FileName);
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            try
             {
-                return NotFound();
+                using (var stream = imageFile.OpenReadStream())
+                using (var img = System.Drawing.Image.FromStream(stream))
+                using (var g = System.Drawing.Graphics.FromImage(img))
+                {
+
+                    string watermarkPath = Path.Combine(_environment.WebRootPath, "images", "watermark.png");
+                    if (System.IO.File.Exists(watermarkPath))
+                    {
+                        using (var watermark = System.Drawing.Image.FromFile(watermarkPath))
+                        {
+
+                            g.SmoothingMode = SmoothingMode.AntiAlias;
+                            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+
+                            int watermarkWidth = img.Width / 4;
+                            int watermarkHeight = (watermarkWidth * watermark.Height) / watermark.Width;
+
+                            int xPosition = img.Width - watermarkWidth - 170;
+                            int yPosition = img.Height - watermarkHeight - 20;
+                            g.DrawImage(watermark, new Rectangle(xPosition, yPosition, watermarkWidth, watermarkHeight));
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("No watermark.png in wwwroot/images!");
+                    }
+                    img.Save(filePath, ImageFormat.Jpeg);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Watermark failed, saving original: " + ex.Message);
+
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    await imageFile.CopyToAsync(fileStream);
+                }
             }
 
-            var vehicle = await _vehicleService.GetVehicleByIdAsync(id.Value);
-            if (vehicle == null)
+            return $"/images/vehicles/{uniqueFileName}";
+        }
+
+        private void DeleteOldImage(string imageUrl)
+        {
+            if (string.IsNullOrEmpty(imageUrl) || imageUrl == "/images/vehicles/default-car.jpg")
+                return;
+
+            try
             {
-                return NotFound();
+                var imagePath = Path.Combine(_environment.WebRootPath, imageUrl.TrimStart('/'));
+                if (System.IO.File.Exists(imagePath))
+                {
+                    System.IO.File.Delete(imagePath);
+                    _logger.LogInformation($"Deleted old image: {imagePath}");
+                }
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error deleting old image: {imageUrl}");
+            }
+        }
+
+        public async Task<IActionResult> Delete(int? id)
+        {
+            if (id == null) return NotFound();
+
+            var vehicle = await _vehicleService.GetVehicleByIdAsync(id.Value);
+            if (vehicle == null) return NotFound();
+
+            ViewBag.HasActiveRentals = await _vehicleService.HasActiveRentalsAsync(vehicle.Id);
+            ViewBag.HasAnyRentals = await _vehicleService.HasAnyRentalsAsync(vehicle.Id);
+            ViewBag.ForceDelete = false;
 
             return View(vehicle);
         }
 
-        // POST: Vehicle/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
+        public async Task<IActionResult> DeleteConfirmed(int id, bool forceDelete = false)
         {
-            var result = await _vehicleService.DeleteVehicleAsync(id);
-            if (result)
+            try
             {
-                TempData["SuccessMessage"] = "Vehicle deleted successfully!";
+                if (forceDelete)
+                {
+                    await _vehicleRepository.ForceDeleteVehicleAsync(id);
+                    TempData["SuccessMessage"] = "Vehicle and all records force deleted!";
+                }
+                else
+                {
+                    await _vehicleService.DeleteVehicleAsync(id);
+                    TempData["SuccessMessage"] = "Vehicle deleted successfully!";
+                }
             }
-            else
+            catch (Exception ex)
             {
-                TempData["ErrorMessage"] = "Vehicle not found!";
+                _logger.LogError(ex, "Error deleting vehicle");
+                TempData["ErrorMessage"] = "Error: " + ex.Message;
             }
 
             return RedirectToAction(nameof(Index));
+        }
+
+        public async Task<IActionResult> ToggleAvailability(int id)
+        {
+            try
+            {
+                var vehicle = await _vehicleService.GetVehicleByIdAsync(id);
+                if (vehicle != null)
+                {
+                    vehicle.IsAvailable = !vehicle.IsAvailable;
+                    await _vehicleService.UpdateVehicleAsync(vehicle);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling availability");
+            }
+            return RedirectToAction(nameof(Index));
+        }
+
+        public async Task<IActionResult> ForceDelete(int id)
+        {
+            if (!User.IsInRole("Admin")) return Forbid();
+            var vehicle = await _vehicleService.GetVehicleByIdAsync(id);
+            if (vehicle == null) return NotFound();
+
+            ViewBag.ForceDelete = true;
+            return View("Delete", vehicle);
         }
 
         private async Task LoadBranchesViewBag()
@@ -198,23 +300,30 @@ namespace CarRentPro.Controllers
             ViewBag.Branches = new SelectList(branches, "Id", "Name");
         }
 
-        private async Task<string> SaveImage(IFormFile imageFile)
+        [AllowAnonymous]
+        public async Task<IActionResult> Available()
         {
-            var uploadsFolder = Path.Combine(_environment.WebRootPath, "images", "vehicles");
-            if (!Directory.Exists(uploadsFolder))
+            var availableVehicles = await _vehicleService.GetAvailableVehiclesAsync();
+            return View(availableVehicles);
+        }
+
+        [AllowAnonymous]
+        public async Task<IActionResult> Search(string searchTerm, int? branchId)
+        {
+            var allVehicles = await _vehicleService.GetAllVehiclesAsync();
+            var filtered = allVehicles.AsQueryable();
+
+            if (!string.IsNullOrEmpty(searchTerm))
             {
-                Directory.CreateDirectory(uploadsFolder);
+                searchTerm = searchTerm.ToLower();
+                filtered = filtered.Where(v => v.Brand.ToLower().Contains(searchTerm) || v.Model.ToLower().Contains(searchTerm));
             }
 
-            var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(imageFile.FileName);
-            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+            if (branchId.HasValue && branchId > 0)
+                filtered = filtered.Where(v => v.BranchId == branchId.Value);
 
-            using (var fileStream = new FileStream(filePath, FileMode.Create))
-            {
-                await imageFile.CopyToAsync(fileStream);
-            }
-
-            return $"/images/vehicles/{uniqueFileName}";
+            await LoadBranchesViewBag();
+            return View(filtered.ToList());
         }
     }
 }
