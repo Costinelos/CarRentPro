@@ -1,10 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using CarRentPro.Models;
 using CarRentPro.Services;
 using CarRentPro.Repositories;
-
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -66,7 +65,6 @@ namespace CarRentPro.Controllers
                 {
                     if (imageFile != null && imageFile.Length > 0)
                     {
-
                         vehicle.ImageUrl = await SaveImageWithWatermark(imageFile);
                     }
 
@@ -135,7 +133,6 @@ namespace CarRentPro.Controllers
                             DeleteOldImage(existingVehicle.ImageUrl);
                         }
 
-
                         vehicle.ImageUrl = await SaveImageWithWatermark(imageFile);
                     }
 
@@ -148,6 +145,15 @@ namespace CarRentPro.Controllers
                     _logger.LogError(ex, "Error updating vehicle");
                     TempData["ErrorMessage"] = "Error updating vehicle: " + ex.Message;
                 }
+            }
+            else
+            {
+                _logger.LogWarning("ModelState is invalid");
+                foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
+                {
+                    _logger.LogWarning($"Validation error: {error.ErrorMessage}");
+                }
+                TempData["ErrorMessage"] = "Please correct the validation errors.";
             }
 
             await LoadBranchesViewBag();
@@ -168,20 +174,18 @@ namespace CarRentPro.Controllers
                 using (var img = System.Drawing.Image.FromStream(stream))
                 using (var g = System.Drawing.Graphics.FromImage(img))
                 {
-
                     string watermarkPath = Path.Combine(_environment.WebRootPath, "images", "watermark.png");
                     if (System.IO.File.Exists(watermarkPath))
                     {
                         using (var watermark = System.Drawing.Image.FromFile(watermarkPath))
                         {
-
                             g.SmoothingMode = SmoothingMode.AntiAlias;
                             g.InterpolationMode = InterpolationMode.HighQualityBicubic;
 
                             int watermarkWidth = img.Width / 4;
                             int watermarkHeight = (watermarkWidth * watermark.Height) / watermark.Width;
 
-                            int xPosition = img.Width - watermarkWidth - 170;
+                            int xPosition = img.Width - watermarkWidth - 20; 
                             int yPosition = img.Height - watermarkHeight - 20;
                             g.DrawImage(watermark, new Rectangle(xPosition, yPosition, watermarkWidth, watermarkHeight));
                         }
@@ -196,7 +200,6 @@ namespace CarRentPro.Controllers
             catch (Exception ex)
             {
                 _logger.LogWarning("Watermark failed, saving original: " + ex.Message);
-
                 using (var fileStream = new FileStream(filePath, FileMode.Create))
                 {
                     await imageFile.CopyToAsync(fileStream);
@@ -233,9 +236,21 @@ namespace CarRentPro.Controllers
             var vehicle = await _vehicleService.GetVehicleByIdAsync(id.Value);
             if (vehicle == null) return NotFound();
 
-            ViewBag.HasActiveRentals = await _vehicleService.HasActiveRentalsAsync(vehicle.Id);
-            ViewBag.HasAnyRentals = await _vehicleService.HasAnyRentalsAsync(vehicle.Id);
+            bool hasActiveRentals = await _vehicleService.HasActiveRentalsAsync(vehicle.Id);
+            bool hasAnyRentals = await _vehicleService.HasAnyRentalsAsync(vehicle.Id);
+
+            ViewBag.HasActiveRentals = hasActiveRentals;
+            ViewBag.HasAnyRentals = hasAnyRentals;
             ViewBag.ForceDelete = false;
+
+            if (hasActiveRentals)
+            {
+                ViewBag.WarningMessage = "This vehicle has active or future rentals.";
+            }
+            else if (hasAnyRentals)
+            {
+                ViewBag.WarningMessage = "This vehicle has past rental history.";
+            }
 
             return View(vehicle);
         }
@@ -246,21 +261,38 @@ namespace CarRentPro.Controllers
         {
             try
             {
+                bool result;
                 if (forceDelete)
                 {
-                    await _vehicleRepository.ForceDeleteVehicleAsync(id);
-                    TempData["SuccessMessage"] = "Vehicle and all records force deleted!";
+                    _logger.LogWarning($"Force deleting vehicle ID: {id}");
+                    result = await _vehicleRepository.ForceDeleteVehicleAsync(id);
+                    if (result)
+                    {
+                        TempData["SuccessMessage"] = "Vehicle and all associated records deleted successfully!";
+                    }
                 }
                 else
                 {
-                    await _vehicleService.DeleteVehicleAsync(id);
-                    TempData["SuccessMessage"] = "Vehicle deleted successfully!";
+                    _logger.LogInformation($"Attempting to delete vehicle ID: {id}");
+                    result = await _vehicleService.DeleteVehicleAsync(id);
+                    if (result)
+                    {
+                        TempData["SuccessMessage"] = "Vehicle deleted successfully!";
+                    }
+                    else
+                    {
+                        var vehicle = await _vehicleService.GetVehicleByIdAsync(id);
+                        if (vehicle != null && !vehicle.IsAvailable)
+                        {
+                            TempData["WarningMessage"] = "Vehicle could not be deleted. It has been marked as unavailable.";
+                        }
+                    }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting vehicle");
-                TempData["ErrorMessage"] = "Error: " + ex.Message;
+                _logger.LogError(ex, $"Error deleting vehicle ID: {id}");
+                TempData["ErrorMessage"] = $"An error occurred: {ex.Message}";
             }
 
             return RedirectToAction(nameof(Index));
@@ -271,11 +303,21 @@ namespace CarRentPro.Controllers
             try
             {
                 var vehicle = await _vehicleService.GetVehicleByIdAsync(id);
-                if (vehicle != null)
+                if (vehicle == null) return NotFound();
+
+                if (!vehicle.IsAvailable)
                 {
-                    vehicle.IsAvailable = !vehicle.IsAvailable;
-                    await _vehicleService.UpdateVehicleAsync(vehicle);
+                    bool hasActiveRentals = await _vehicleService.HasActiveRentalsAsync(id);
+                    if (hasActiveRentals)
+                    {
+                        TempData["ErrorMessage"] = "Cannot mark as available because it has active rentals.";
+                        return RedirectToAction(nameof(Index));
+                    }
                 }
+
+                vehicle.IsAvailable = !vehicle.IsAvailable;
+                await _vehicleService.UpdateVehicleAsync(vehicle);
+                TempData["SuccessMessage"] = vehicle.IsAvailable ? "Vehicle available!" : "Vehicle unavailable!";
             }
             catch (Exception ex)
             {
@@ -286,11 +328,17 @@ namespace CarRentPro.Controllers
 
         public async Task<IActionResult> ForceDelete(int id)
         {
-            if (!User.IsInRole("Admin")) return Forbid();
+            if (!User.IsInRole("Admin"))
+            {
+                TempData["ErrorMessage"] = "Only administrators can perform force delete.";
+                return RedirectToAction(nameof(Index));
+            }
+
             var vehicle = await _vehicleService.GetVehicleByIdAsync(id);
             if (vehicle == null) return NotFound();
 
             ViewBag.ForceDelete = true;
+            ViewBag.WarningMessage = "⚠️ WARNING: This will remove ALL associated records. Action cannot be undone!";
             return View("Delete", vehicle);
         }
 
@@ -316,12 +364,17 @@ namespace CarRentPro.Controllers
             if (!string.IsNullOrEmpty(searchTerm))
             {
                 searchTerm = searchTerm.ToLower();
-                filtered = filtered.Where(v => v.Brand.ToLower().Contains(searchTerm) || v.Model.ToLower().Contains(searchTerm));
+                filtered = filtered.Where(v => 
+                    (v.Brand != null && v.Brand.ToLower().Contains(searchTerm)) || 
+                    (v.Model != null && v.Model.ToLower().Contains(searchTerm)) ||
+                    (v.Color != null && v.Color.ToLower().Contains(searchTerm)));
             }
 
             if (branchId.HasValue && branchId > 0)
                 filtered = filtered.Where(v => v.BranchId == branchId.Value);
 
+            ViewBag.SearchTerm = searchTerm;
+            ViewBag.BranchId = branchId;
             await LoadBranchesViewBag();
             return View(filtered.ToList());
         }

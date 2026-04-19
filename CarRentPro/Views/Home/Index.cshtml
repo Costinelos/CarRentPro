@@ -1,8 +1,9 @@
-﻿@model IEnumerable<CarRentPro.Models.Vehicle>
+@model IEnumerable<CarRentPro.Models.Vehicle>
 
 @{
     ViewData["Title"] = "Home Page";
 
+    // Extrage marca si anii pt dropdown
     var allBrands = Model.Select(v => v.Brand).Distinct().OrderBy(b => b).ToList();
     var allYears = Model.Select(v => v.Year).Distinct().OrderByDescending(y => y).ToList();
 }
@@ -79,14 +80,33 @@
                                     </div>
                                     <div class="row mt-3">
                                         <div class="col-12 text-end">
-                                            <button type="submit" class="btn btn-primary">Apply Filters</button>
-                                            <button type="button" class="btn btn-outline-secondary" onclick="clearFilters()">Clear</button>
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="fas fa-search"></i> Apply Filters
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" onclick="clearFilters()">
+                                                <i class="fas fa-times"></i> Clear
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </form>
+
+                    <div class="text-center">
+                        <small class="text-muted">Quick search:</small>
+                        <div class="mt-2">
+                            @foreach (var brand in allBrands.Take(5))
+                            {
+                                <a href="@Url.Action("Search", "Vehicle", new { searchTerm = brand })" class="btn btn-sm btn-outline-primary me-2 mb-2">
+                                    @brand
+                                </a>
+                            }
+                            <a href="@Url.Action("Search", "Vehicle", new { availabilityFilter = "available" })" class="btn btn-sm btn-outline-success me-2 mb-2">
+                                <i class="fas fa-check"></i> Available
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -116,14 +136,15 @@
                             <p class="card-text">
                                 <small class="text-muted">
                                     <i class="fas fa-calendar-alt"></i> @vehicle.Year |
+                                    <i class="fas fa-palette"></i> @vehicle.Color<br>
                                     <i class="fas fa-map-marker-alt"></i> @vehicle.Branch?.Name
                                 </small>
                             </p>
                             <p class="card-text vehicle-description">@vehicle.Description</p>
                         </div>
                         <div class="card-footer bg-white border-top-0">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <span class="h5 mb-0 text-primary">$@vehicle.PricePerDay/day</span>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="h5 mb-0 text-primary">$@string.Format("{0:F2}", vehicle.PricePerDay)/day</span>
                                 @if (vehicle.IsAvailable)
                                 {
                                     <span class="badge bg-success">Available</span>
@@ -148,6 +169,25 @@
                     </div>
                 </div>
             }
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12 text-center">
+                <a href="@Url.Action("Search", "Vehicle")" class="btn btn-outline-primary">
+                    <i class="fas fa-list"></i> View All Vehicles
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-12 text-center">
+                <div class="alert alert-info">
+                    <h4><i class="fas fa-car me-2"></i>No vehicles available</h4>
+                    <p>Please try a different search or check back later.</p>
+                </div>
+            </div>
         </div>
     }
 </div>
@@ -195,90 +235,24 @@
 </div>
 
 <style>
-    .vehicle-image {
-        height: 200px;
-        object-fit: cover;
-        width: 100%;
+    .vehicle-image { height: 200px; object-fit: cover; width: 100%; }
+    .vehicle-card { transition: transform 0.2s; }
+    .vehicle-card:hover { transform: translateY(-5px); }
+    .vehicle-description { 
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; 
+        overflow: hidden; text-overflow: ellipsis; height: 48px; 
     }
-
-    .vehicle-card {
-        transition: transform 0.2s;
-    }
-
-        .vehicle-card:hover {
-            transform: translateY(-5px);
-        }
-
-    .card {
-        border: none;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-
     .autocomplete-dropdown {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        background: white;
-        border: 1px solid #ddd;
-        z-index: 1000;
-        display: none;
+        position: absolute; top: 100%; left: 0; right: 0; background: white;
+        border: 1px solid #ddd; z-index: 1000; display: none; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
-
-    .autocomplete-item {
-        padding: 10px;
-        cursor: pointer;
-        border-bottom: 1px solid #eee;
-    }
-
-        .autocomplete-item:hover, .autocomplete-item.highlight {
-            background-color: #f8f9fa;
-        }
-
-    .vehicle-description {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        height: 45px;
-    }
-
-    /* Animations */
-    .fade-in {
-        animation: fadeIn 0.3s ease-in;
-    }
-
-    @@keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .listening {
-        animation: pulse-red 1.5s infinite;
-        background-color: #dc3545 !important;
-        color: white !important;
-    }
-
+    .autocomplete-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
+    .autocomplete-item:hover, .autocomplete-item.highlight { background-color: #f8f9fa; }
+    .listening { animation: pulse-red 1.5s infinite; background-color: #dc3545 !important; color: white !important; }
     @@keyframes pulse-red {
-        0% {
-            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
-        }
-
-        70% {
-            box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
-        }
-
-        100% {
-            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
-        }
+        0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
     }
 </style>
 
@@ -287,13 +261,14 @@
         let vehicleSuggestions = [];
 
         document.addEventListener('DOMContentLoaded', function() {
-            // Setup Autocomplete Data
+            // Collect suggestions from cards
             document.querySelectorAll('.vehicle-card').forEach(card => {
-                const fields = ['brand', 'model', 'color', 'year', 'branch'];
-                fields.forEach(f => {
-                    const val = card.dataset[f];
-                    if (val && !vehicleSuggestions.some(s => s.text === val))
-                        vehicleSuggestions.push({ text: val, type: f });
+                const data = card.dataset;
+                ['brand', 'model', 'color', 'year', 'branch'].forEach(key => {
+                    const val = data[key];
+                    if (val && !vehicleSuggestions.some(s => s.text === val)) {
+                        vehicleSuggestions.push({ text: val, type: key });
+                    }
                 });
             });
 
@@ -302,48 +277,47 @@
             populateFilterValuesFromUrl();
         });
 
+        // Search Autocomplete Logic
+        function initializeAutocomplete() {
+            const input = document.getElementById('searchInput');
+            const results = document.getElementById('autocompleteResults');
+            
+            input.addEventListener('input', function() {
+                const val = this.value.toLowerCase().trim();
+                if (val.length < 1) { results.style.display = 'none'; return; }
+                
+                const filtered = vehicleSuggestions.filter(s => s.text.toLowerCase().includes(val)).slice(0, 10);
+                results.innerHTML = filtered.map(s => 
+                    `<div class="autocomplete-item" data-value="${s.text}">${s.text} <small class="text-muted">(${s.type})</small></div>`
+                ).join('');
+                results.style.display = filtered.length ? 'block' : 'none';
+
+                document.querySelectorAll('.autocomplete-item').forEach(item => {
+                    item.onclick = function() {
+                        input.value = this.dataset.value;
+                        results.style.display = 'none';
+                        document.getElementById('searchForm').submit();
+                    };
+                });
+            });
+        }
+
+        // AI Chat Widget Logic
         function initializeSmartChat() {
             const toggleBtn = document.getElementById('toggle-chat'), chatWindow = document.getElementById('chat-window'),
-                  closeBtn = document.getElementById('close-chat'), clearBtn = document.getElementById('clear-chat'),
-                  sendBtn = document.getElementById('send-btn'), micBtn = document.getElementById('mic-btn'),
-                  voiceBtn = document.getElementById('voice-toggle'), voiceIcon = document.getElementById('voice-icon'),
-                  msgArea = document.getElementById('chat-messages'), input = document.getElementById('user-input'),
-                  typingIndicator = document.getElementById('typing-indicator');
+                  msgArea = document.getElementById('chat-messages'), input = document.getElementById('user-input');
 
             let isVoiceEnabled = JSON.parse(localStorage.getItem('carRentVoiceEnabled')) ?? true;
-            updateVoiceButtonUI();
 
-            // Voice Toggle
-            voiceBtn.onclick = () => {
-                isVoiceEnabled = !isVoiceEnabled;
-                localStorage.setItem('carRentVoiceEnabled', isVoiceEnabled);
-                updateVoiceButtonUI();
-                if(!isVoiceEnabled) window.speechSynthesis.cancel();
-            };
-
-            function updateVoiceButtonUI() {
-                voiceIcon.className = isVoiceEnabled ? "fas fa-volume-up" : "fas fa-volume-mute";
-                voiceBtn.className = isVoiceEnabled ? "btn btn-sm btn-outline-secondary text-white me-2" : "btn btn-sm btn-outline-danger text-danger me-2";
-            }
-
-            // Load History
-            const history = JSON.parse(localStorage.getItem('carRentChatHistory')) || [];
-            if(history.length > 0) {
-                document.querySelector('.welcome-msg').style.display = 'none';
-                history.forEach(m => appendMessageToUI(m.text, m.sender, false));
-            }
-
-            toggleBtn.onclick = () => { chatWindow.style.display = 'block'; toggleBtn.style.display = 'none'; msgArea.scrollTop = msgArea.scrollHeight; };
-            closeBtn.onclick = () => { chatWindow.style.display = 'none'; toggleBtn.style.display = 'block'; };
-            clearBtn.onclick = () => { if(confirm('Ștergi chat-ul?')) { localStorage.removeItem('carRentChatHistory'); location.reload(); } };
+            toggleBtn.onclick = () => { chatWindow.style.display = 'block'; toggleBtn.style.display = 'none'; };
+            document.getElementById('close-chat').onclick = () => { chatWindow.style.display = 'none'; toggleBtn.style.display = 'block'; };
 
             const sendMessage = async () => {
                 const text = input.value.trim();
                 if (!text) return;
-                appendMessageToUI(text, 'user', true);
+                appendMessage(text, 'user');
                 input.value = '';
-                document.querySelector('.welcome-msg').style.display = 'none';
-                typingIndicator.style.display = 'block';
+                document.getElementById('typing-indicator').style.display = 'block';
 
                 try {
                     const res = await fetch('/Home/GetAiRecommendation', {
@@ -352,61 +326,30 @@
                         body: JSON.stringify(text)
                     });
                     const data = await res.json();
-                    typingIndicator.style.display = 'none';
-                    appendMessageToUI(data.reply, 'ai', true);
-                    if(isVoiceEnabled) speakText(data.reply);
-                } catch (e) { typingIndicator.style.display = 'none'; }
+                    document.getElementById('typing-indicator').style.display = 'none';
+                    appendMessage(data.reply, 'ai');
+                    if(isVoiceEnabled) speak(data.reply);
+                } catch (e) { document.getElementById('typing-indicator').style.display = 'none'; }
             };
 
-            sendBtn.onclick = sendMessage;
+            document.getElementById('send-btn').onclick = sendMessage;
             input.onkeypress = (e) => { if(e.key === 'Enter') sendMessage(); };
 
-            // Speech Recognition
-            if ('webkitSpeechRecognition' in window) {
-                const rec = new webkitSpeechRecognition();
-                rec.lang = 'ro-RO';
-                micBtn.onclick = () => rec.start();
-                rec.onstart = () => micBtn.classList.add('listening');
-                rec.onend = () => micBtn.classList.remove('listening');
-                rec.onresult = (e) => { input.value = e.results[0][0].transcript; setTimeout(sendMessage, 500); };
-            }
-
-            function appendMessageToUI(text, sender, save) {
-                const isUser = sender === 'user';
-                const html = `<div class="${isUser ? 'text-end' : 'text-start'} mb-2 fade-in">
-                    <div class="d-inline-block p-2 rounded-3 ${isUser ? 'bg-primary text-white' : 'bg-light border'}" style="max-width:85%">${text}</div>
+            function appendMessage(text, sender) {
+                const html = `<div class="${sender === 'user' ? 'text-end' : 'text-start'} mb-2">
+                    <div class="d-inline-block p-2 rounded-3 ${sender === 'user' ? 'bg-primary text-white' : 'bg-light border'}">${text}</div>
                 </div>`;
                 msgArea.insertAdjacentHTML('beforeend', html);
                 msgArea.scrollTop = msgArea.scrollHeight;
-                if(save) {
-                    const h = JSON.parse(localStorage.getItem('carRentChatHistory')) || [];
-                    h.push({text, sender});
-                    localStorage.setItem('carRentChatHistory', JSON.stringify(h));
-                }
             }
 
-            function speakText(text) {
-                window.speechSynthesis.cancel();
-                const clean = text.replace(/<[^>]*>?/gm, '');
-                const utterance = new SpeechSynthesisUtterance(clean);
-                utterance.lang = clean.match(/[ăâîșț]/i) ? 'ro-RO' : 'en-US';
+            function speak(text) {
+                const utterance = new SpeechSynthesisUtterance(text.replace(/<[^>]*>?/gm, ''));
+                utterance.lang = 'ro-RO';
                 window.speechSynthesis.speak(utterance);
             }
         }
 
-        // Autocomplete
-        function initializeAutocomplete() {
-            const input = document.getElementById('searchInput'), results = document.getElementById('autocompleteResults');
-            input.oninput = function() {
-                const val = this.value.toLowerCase();
-                if(!val) { results.style.display = 'none'; return; }
-                const filtered = vehicleSuggestions.filter(s => s.text.toLowerCase().includes(val)).slice(0, 10);
-                results.innerHTML = filtered.map(s => `<div class="autocomplete-item" data-val="${s.text}">${s.text} <small class="text-muted">(${s.type})</small></div>`).join('');
-                results.style.display = filtered.length ? 'block' : 'none';
-                document.querySelectorAll('.autocomplete-item').forEach(i => i.onclick = function() { input.value = this.dataset.val; results.style.display = 'none'; document.getElementById('searchForm').submit(); });
-            };
-        }
- 
         function populateFilterValuesFromUrl() {
             const params = new URLSearchParams(window.location.search);
             ['brandFilter', 'yearFilter', 'priceFilter', 'searchTerm'].forEach(id => {

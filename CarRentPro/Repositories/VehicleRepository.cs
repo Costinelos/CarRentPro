@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using CarRentPro.Models;
 using System.Data;
 
@@ -38,7 +38,10 @@ namespace CarRentPro.Repositories
         public async Task<Vehicle> UpdateVehicleAsync(Vehicle vehicle)
         {
             var existing = await _context.Vehicles.FindAsync(vehicle.Id);
-            if (existing == null) throw new Exception("Vehicle not found");
+            if (existing == null)
+            {
+                throw new Exception("Vehicle not found");
+            }
 
             existing.Brand = vehicle.Brand;
             existing.Model = vehicle.Model;
@@ -49,7 +52,8 @@ namespace CarRentPro.Repositories
             existing.ImageUrl = vehicle.ImageUrl;
             existing.BranchId = vehicle.BranchId;
             existing.IsAvailable = vehicle.IsAvailable;
-            // IMPORTANT PENTRU MULTIMEDIA:
+            
+            // IMPORTANT PENTRU MULTIMEDIA (Păstrat din branch-ul AI)
             existing.VideoUrl = vehicle.VideoUrl;
 
             _context.Vehicles.Update(existing);
@@ -59,45 +63,58 @@ namespace CarRentPro.Repositories
 
         public async Task<bool> DeleteVehicleAsync(int id)
         {
-            var vehicle = await _context.Vehicles.FindAsync(id);
-            if (vehicle == null) return false;
-
-            if (await HasActiveRentalsAsync(id))
-            {
-                vehicle.IsAvailable = false;
-                _context.Update(vehicle);
-            }
-            else
-            {
-                _context.Vehicles.Remove(vehicle);
-            }
-            return await _context.SaveChangesAsync() > 0;
-        }
-
-        public async Task<bool> HasActiveRentalsAsync(int vehicleId)
-        {
-            return await _context.Rentals.AnyAsync(r => r.VehicleId == vehicleId && r.Status == "Active");
-        }
-
-        public async Task<bool> HasAnyRentalsAsync(int vehicleId)
-        {
-            return await _context.Rentals.AnyAsync(r => r.VehicleId == vehicleId);
-        }
-
-        public async Task<bool> ForceDeleteVehicleAsync(int id)
-        {
             using var transaction = await _context.Database.BeginTransactionAsync();
+
             try
             {
-                await _context.Database.ExecuteSqlRawAsync("DELETE FROM Rentals WHERE VehicleId = {0}", id);
-                await _context.Database.ExecuteSqlRawAsync("DELETE FROM VehicleStocks WHERE VehicleId = {0}", id);
-                var result = await _context.Database.ExecuteSqlRawAsync("DELETE FROM Vehicles WHERE Id = {0}", id);
+                var vehicle = await _context.Vehicles.FindAsync(id);
+                if (vehicle == null)
+                {
+                    await transaction.RollbackAsync();
+                    return false;
+                }
+
+                bool hasActiveRentals = await HasActiveRentalsAsync(id);
+
+                if (hasActiveRentals)
+                {
+                    // Dacă are închirieri active, doar îl marcăm ca indisponibil
+                    vehicle.IsAvailable = false;
+                    _context.Vehicles.Update(vehicle);
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    return false; 
+                }
+
+                // Ștergem stocul asociat
+                var vehicleStocks = await _context.VehicleStocks
+                    .Where(vs => vs.VehicleId == id)
+                    .ToListAsync();
+
+                if (vehicleStocks.Any())
+                {
+                    _context.VehicleStocks.RemoveRange(vehicleStocks);
+                }
+
+                // Ștergem închirierile (care nu sunt active, ex: istoricul) dacă logica business permite
+                var rentals = await _context.Rentals
+                    .Where(r => r.VehicleId == id)
+                    .ToListAsync();
+
+                if (rentals.Any())
+                {
+                    _context.Rentals.RemoveRange(rentals);
+                }
+
+                _context.Vehicles.Remove(vehicle);
+                await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
-                return result > 0;
+                return true;
             }
-            catch
+            catch (Exception ex)
             {
                 await transaction.RollbackAsync();
+                Console.WriteLine($"DeleteVehicleAsync error: {ex.Message}");
                 return false;
             }
         }
@@ -106,5 +123,18 @@ namespace CarRentPro.Repositories
         {
             return await _context.Vehicles.Where(v => v.BranchId == branchId).ToListAsync();
         }
-    }
-}
+
+        public async Task<bool> HasActiveRentalsAsync(int vehicleId)
+        {
+            var now = DateTime.Now;
+
+            // Verificăm închirierile active după Status sau Dată
+            return await _context.Rentals.AnyAsync(r => r.VehicleId == vehicleId && 
+                (r.Status == "Active" || 
+                 r.RentalDate > now || 
+                 (r.RentalDate <= now && (r.ReturnDate == null || r.ReturnDate > now))));
+        }
+
+        public async Task<bool> HasAnyRentalsAsync(int vehicleId)
+        {
+            return await _context.Rentals.AnyAsync(r => r.VehicleId ==

@@ -1,4 +1,4 @@
-﻿using CarRentPro.Models;
+using CarRentPro.Models;
 using CarRentPro.Repositories;
 using Microsoft.EntityFrameworkCore;
 

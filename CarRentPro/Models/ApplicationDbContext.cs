@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using CarRentPro.Models;
 
@@ -77,10 +77,14 @@ namespace CarRentPro.Models
 
             // Profiluri Predefinite
             builder.Entity<PredefinedProfilePicture>()
-                .Property(p => p.ImageName).IsRequired().HasMaxLength(100);
+                .Property(p => p.ImageName)
+                .IsRequired()
+                .HasMaxLength(100);
 
             builder.Entity<PredefinedProfilePicture>()
-                .Property(p => p.ImagePath).IsRequired().HasMaxLength(200);
+                .Property(p => p.ImagePath)
+                .IsRequired()
+                .HasMaxLength(200);
         }
     }
 }
